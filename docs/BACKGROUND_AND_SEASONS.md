@@ -1,24 +1,27 @@
-# Forest Backdrop and Seasons — First Pass
+# Editable Forest Backdrop
 
-## Current implementation
-- `assets/backgrounds/moody_snowy_forest_96.png` is a **96×54 reduced-color pixel-art preview** of the original generated panorama. It was compressed for the first repository integration; it is intentionally less detailed than the concept image.
-- `World.cs` draws the panorama behind the 32px foreground sprites and terrain. It repeats across the finite map, so seams can appear.
-- `DayNightCycle.cs` is a single `CanvasModulate` that multiplies color over the entire canvas, including both the background and foreground.
-- **Press T** to cycle spring/summer/autumn/winter tint. The transition is gradual and affects all world elements together.
-- The existing day/night modulation is preserved.
+## Architecture
+The backdrop is now **native Godot content**, not a flattened image.
 
-## Future architecture
-Move from global tint to an `EnvironmentState` resource containing time-of-day, season, weather, humidity and biome. Background, trees, ground, particles, ambient lights and sky each sample the same state but apply different response curves. This allows independent snow coverage, green/yellow leaves and weather effects without breaking visual coherence.
+`scenes/main.tscn` contains the dedicated `ForestBackdrop` node, driven by `scripts/ForestBackdrop.cs`. It draws:
+- adjustable sky gradient
+- jagged mountains with separate snow caps
+- two independent conifer forest depth layers
+- subtle drifting mist
+
+All components use deterministic geometry and editable exported parameters in the Godot Inspector. Select **ForestBackdrop** to adjust palette, mountain horizon, parallax strengths, dimensions, and fog speed.
+
+## Shared environment
+`DayNightCycle.cs` remains a shared `CanvasModulate` for both world and backdrop. Press **T** to cycle seasonal color themes. This changes tint now; future seasons should adjust snow coverage, foliage and biome-specific palettes in a central EnvironmentState resource.
 
 ## Limitations
-This currently changes **tone**, not tree topology, leaf textures, snow buildup or weather. Future seasonal systems should drive per-layer materials as well as the shared grade. Background repeat is a placeholder, not a seamless parallax-scrolling solution. The new image is a reduced-palette preview rather than a native-resolution panorama.
+The first geometric mountain pass is intentionally a prototype. It does **not** reproduce the detailed generated illustration, and tree silhouettes are still procedural rather than authored pixel-art layers. No external PNG is required. Parallax geometry is currently redrawn with the camera and should be profiled before scaling the game. Adjusting exported values while paused in the scene Inspector requires reopening/running the scene for redraw to preview accurately.
 
-## Local test
-Checkout `feature/32px-artwork-integration`, let Godot import the new PNG, `dotnet build`, press F5 and T to test seasonal tone changes. Check that both hills and player-world vegetation color-shift together.
-
-## Full-resolution panorama upgrade
-The former 96×54 asset looked blocky because it was scaled to over 1,000 world pixels. The renderer now **prefers** `res://assets/backgrounds/AETHERIS_MountainBackdrop.png` when present, then falls back to the existing preview.
-
-Download the prepared 1280×720 PNG supplied in this conversation, save it under `assets/backgrounds/AETHERIS_MountainBackdrop.png`, and restart Godot to import it. The large image must be committed to Git after local verification.
-
-This backdrop currently follows the player's camera with slight horizontal drift. Its seasonal/daylight color grade stays linked with the foreground via the shared CanvasModulate. Later, split it into sky / snow peaks / distant woods / near woods for real multi-depth parallax and distinct seasonal responses.
+## Test
+```powershell
+git fetch origin
+git switch feature/32px-artwork-integration
+git pull
+dotnet build
+```
+Open Godot and press F5. Adjust ForestBackdrop properties from the Inspector; press T in-game to cycle seasonal tint.
