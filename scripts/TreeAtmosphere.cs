@@ -24,16 +24,18 @@ public partial class TreeAtmosphere : Node2D
         foreach (TreeInstance tree in _trees)
         {
             var material = new ShaderMaterial { Shader = FoliageShader };
-            ImageTexture texture = TreeArt.Create(tree);
+            Texture2D texture = tree.Variant.Texture;
             var sprite = new Sprite2D
             {
                 Texture = texture,
                 Position = tree.Root,
-                Offset = new Vector2(0, -texture.GetHeight() / 2f + TreeArt.Embed),
+                Offset = new Vector2(0, -texture.GetHeight() / 2f + TreeCatalog.Embed),
                 Material = material,
                 ZIndex = -1 // trees stay in the background, behind the ground tiles
             };
             material.SetShaderParameter("tree_phase", tree.Id * 0.73f);
+            material.SetShaderParameter("sway_pixels", tree.Variant.Sway);
+            material.SetShaderParameter("leaf_start", tree.Variant.LeafStart);
             AddChild(sprite);
             _visuals[tree] = (sprite, material);
         }

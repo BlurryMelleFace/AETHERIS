@@ -4,13 +4,13 @@ namespace Aetheris;
 
 public enum HeroRow { Idle, Walk, Run, Jump, Attack }
 
-/// <summary>Plays the hero sprite sheet; each art pixel is drawn 1.5 world px so it is crisp at the 4/3 camera zoom.</summary>
+/// <summary>Plays the hero sprite sheet; one art pixel is one world pixel, matching the tiles and trees.</summary>
 public partial class HeroSprite : Sprite2D
 {
-    public const int FrameSize = 56;
+    public const int FrameSize = 84;
     public const int Columns = 6;
     public const int Rows = 5;
-    public const float PixelScale = 1.5f;
+    public const float PixelScale = 1f;
 
     private static readonly Texture2D Sheet = GD.Load<Texture2D>("res://assets/characters/hero_sheet.png");
     private static readonly Texture2D HoldSheet = GD.Load<Texture2D>("res://assets/characters/hero_sheet_hold.png");

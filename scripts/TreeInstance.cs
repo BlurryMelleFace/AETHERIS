@@ -7,12 +7,12 @@ public sealed class TreeInstance
 {
     public const int TrunkTiles = 1;
 
-    public TreeInstance(int id, int trunkColumn, int baseRow, int heightTiles)
+    public TreeInstance(int id, int trunkColumn, int baseRow, TreeVariant variant)
     {
         Id = id;
         TrunkColumn = trunkColumn;
         BaseRow = baseRow;
-        HeightTiles = heightTiles;
+        Variant = variant;
     }
 
     public int Id { get; }
@@ -23,11 +23,13 @@ public sealed class TreeInstance
     /// <summary>First ground row under the trunk.</summary>
     public int BaseRow { get; }
 
-    public int HeightTiles { get; }
+    public TreeVariant Variant { get; }
+    public int HeightTiles => Variant.HeightTiles;
+    public string Species => Variant.Species;
     public bool Felled { get; set; }
 
-    /// <summary>Rows of bare trunk above the ground before the canopy starts.</summary>
-    public int BareTrunkRows => Mathf.Max(3, Mathf.RoundToInt(HeightTiles * 0.3f));
+    /// <summary>Rows of bare trunk above the ground before the leaves start.</summary>
+    public int BareTrunkRows => Mathf.Max(3, Variant.BareRows);
 
     /// <summary>Ground contact point at the centre of the trunk.</summary>
     public Vector2 Root => new((TrunkColumn + TrunkTiles / 2f) * World.TileSize, BaseRow * World.TileSize);

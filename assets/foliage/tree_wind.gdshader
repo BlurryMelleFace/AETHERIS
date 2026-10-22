@@ -6,6 +6,7 @@ uniform float tree_phase = 0.0;
 uniform float sun_direction = 0.0;
 uniform float daylight = 1.0;
 uniform float sway_pixels = 7.0;
+uniform float leaf_start = 0.3;
 varying vec4 tree_color;
 
 void vertex() {
@@ -18,7 +19,7 @@ void vertex() {
 
 void fragment() {
     float height_weight = 1.0 - UV.y;
-    float canopy = smoothstep(0.04, 0.28, height_weight);
+    float canopy = smoothstep(leaf_start - 0.26, leaf_start - 0.02, height_weight);
     float branch = sin(wind_time * 1.37 + tree_phase + UV.y * 18.0)
         + 0.45 * sin(wind_time * 2.13 - tree_phase + UV.y * 31.0);
     float needles = sin(wind_time * 3.1 + UV.y * 57.0 + UV.x * 23.0 + tree_phase);
@@ -29,7 +30,7 @@ void fragment() {
     foliage.a *= step(0.0, sample_uv.x) * step(sample_uv.x, 1.0);
     float shaded_side = mix(UV.x, 1.0 - UV.x, smoothstep(-0.2, 0.2, sun_direction));
     float shade = smoothstep(0.2, 0.9, shaded_side) * (0.08 + daylight * 0.12);
-    float tier_shade = (0.5 + 0.5 * sin(UV.y * 36.0 + displacement * 28.0)) * canopy * 0.045;
+    float tier_shade = (0.5 + 0.5 * sin(UV.y * 36.0 + displacement * 28.0)) * canopy * 0.02;
     float edge = max(0.0, foliage.a - texture(TEXTURE,
         sample_uv + vec2(sign(sun_direction) * TEXTURE_PIXEL_SIZE.x, 0.0)).a);
     vec3 color = foliage.rgb * (1.0 - shade - tier_shade);

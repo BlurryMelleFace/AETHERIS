@@ -1,0 +1,205 @@
+{
+ "props": [
+  {
+   "name": "tuft_0",
+   "kind": "tuft",
+   "x": 2,
+   "y": 2,
+   "w": 12,
+   "h": 11
+  },
+  {
+   "name": "tuft_1",
+   "kind": "tuft",
+   "x": 16,
+   "y": 2,
+   "w": 18,
+   "h": 15
+  },
+  {
+   "name": "tuft_2",
+   "kind": "tuft",
+   "x": 36,
+   "y": 2,
+   "w": 24,
+   "h": 20
+  },
+  {
+   "name": "tuft_3",
+   "kind": "tuft",
+   "x": 62,
+   "y": 2,
+   "w": 16,
+   "h": 13
+  },
+  {
+   "name": "tuft_4",
+   "kind": "tuft",
+   "x": 80,
+   "y": 2,
+   "w": 22,
+   "h": 17
+  },
+  {
+   "name": "flowers_white_0",
+   "kind": "flower",
+   "x": 104,
+   "y": 2,
+   "w": 30,
+   "h": 30
+  },
+  {
+   "name": "flowers_yellow_1",
+   "kind": "flower",
+   "x": 136,
+   "y": 2,
+   "w": 30,
+   "h": 30
+  },
+  {
+   "name": "flowers_pink_2",
+   "kind": "flower",
+   "x": 168,
+   "y": 2,
+   "w": 30,
+   "h": 30
+  },
+  {
+   "name": "flowers_blue_3",
+   "kind": "flower",
+   "x": 200,
+   "y": 2,
+   "w": 30,
+   "h": 30
+  },
+  {
+   "name": "flowers_white_4",
+   "kind": "flower",
+   "x": 232,
+   "y": 2,
+   "w": 30,
+   "h": 30
+  },
+  {
+   "name": "flowers_yellow_5",
+   "kind": "flower",
+   "x": 264,
+   "y": 2,
+   "w": 30,
+   "h": 30
+  },
+  {
+   "name": "fern_0",
+   "kind": "fern",
+   "x": 296,
+   "y": 2,
+   "w": 30,
+   "h": 24
+  },
+  {
+   "name": "fern_1",
+   "kind": "fern",
+   "x": 328,
+   "y": 2,
+   "w": 40,
+   "h": 30
+  },
+  {
+   "name": "bush_0",
+   "kind": "bush",
+   "x": 370,
+   "y": 2,
+   "w": 34,
+   "h": 24
+  },
+  {
+   "name": "bush_1",
+   "kind": "bush",
+   "x": 2,
+   "y": 34,
+   "w": 46,
+   "h": 30
+  },
+  {
+   "name": "bush_2",
+   "kind": "bush",
+   "x": 50,
+   "y": 34,
+   "w": 58,
+   "h": 34
+  },
+  {
+   "name": "bush_3",
+   "kind": "bush",
+   "x": 110,
+   "y": 34,
+   "w": 40,
+   "h": 26
+  },
+  {
+   "name": "rock_0",
+   "kind": "rock",
+   "x": 152,
+   "y": 34,
+   "w": 18,
+   "h": 12
+  },
+  {
+   "name": "rock_1",
+   "kind": "rock",
+   "x": 172,
+   "y": 34,
+   "w": 28,
+   "h": 19
+  },
+  {
+   "name": "rock_2",
+   "kind": "rock",
+   "x": 202,
+   "y": 34,
+   "w": 42,
+   "h": 28
+  },
+  {
+   "name": "rock_3",
+   "kind": "rock",
+   "x": 246,
+   "y": 34,
+   "w": 24,
+   "h": 15
+  },
+  {
+   "name": "mushroom_red",
+   "kind": "mushroom",
+   "x": 272,
+   "y": 34,
+   "w": 28,
+   "h": 18
+  },
+  {
+   "name": "mushroom_brown",
+   "kind": "mushroom",
+   "x": 302,
+   "y": 34,
+   "w": 28,
+   "h": 18
+  },
+  {
+   "name": "stump_0",
+   "kind": "stump",
+   "x": 332,
+   "y": 34,
+   "w": 34,
+   "h": 30
+  },
+  {
+   "name": "log_0",
+   "kind": "log",
+   "x": 2,
+   "y": 70,
+   "w": 80,
+   "h": 24,
+   "width_tiles": 4
+  }
+ ]
+}

@@ -1,5 +1,6 @@
 using Godot;
 using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -42,6 +43,7 @@ public partial class TerrainScaleSmoke : Node
             GD.Print($"PERF view {view.X / World.TileSize:F1} x {view.Y / World.TileSize:F1} tiles, character {heightTiles / (view.Y / World.TileSize) * 100:F0}% of screen height");
 
             CheckTrees();
+            CheckProps();
             CheckCaves(args.Length > 1 && args[1] == "map");
 
             // --- Physics arena: flat floor with narrow and wide shafts. ---
@@ -179,7 +181,7 @@ public partial class TerrainScaleSmoke : Node
             _player.Equipment.Equip(ItemCatalog.Torch);
             await RealSeconds(0.4);
             var torchLight = _player.GetNode<TorchLight>("TorchLight");
-            Vector2 flame = _player.Hero.HandPosition + new Vector2(0f, -15f);
+            Vector2 flame = _player.Hero.HandPosition + new Vector2(0f, -20f);
             Require(torchLight.Position.DistanceTo(flame) < 1f, "The torch light must follow the hand.");
             await Shoot("hero_torch");
 
@@ -201,23 +203,26 @@ public partial class TerrainScaleSmoke : Node
         foreach (Node child in atmosphere.GetChildren()) if (child is Sprite2D) spriteCount++;
         Require(spriteCount == _world.Trees.Count, "Every tree needs a sprite.");
 
+        var species = new HashSet<string>();
         foreach (TreeInstance tree in _world.Trees)
         {
-            Require(tree.HeightTiles >= 10 && tree.HeightTiles <= 14, "Trees are 10-14 blocks tall.");
+            species.Add(tree.Species);
+            Require(tree.HeightTiles >= 9 && tree.HeightTiles <= 15, "Trees are 9-15 blocks tall.");
             Require(_world.IsSolid(tree.TrunkColumn, tree.BaseRow), "A tree trunk must stand on ground.");
             Require(!_world.IsSolid(tree.TrunkColumn, tree.BaseRow - 1), "Trees must not be buried.");
+
+            // Every species' trunk, measured above the root flare, is a little under one block wide.
+            Image tex = tree.Variant.Texture.GetImage();
+            Require(tex.GetHeight() == tree.HeightTiles * World.TileSize + TreeCatalog.Embed, "Tree art is drawn 1:1, never stretched.");
+            int row = tex.GetHeight() - TreeCatalog.Embed - 25, first = -1, last = -1;
+            for (int x = 0; x < tex.GetWidth(); x++)
+                if (tex.GetPixel(x, row).A > 0.5f) { if (first < 0) first = x; last = x; }
+            int trunkWidth = last - first + 1;
+            Require(trunkWidth >= 14 && trunkWidth < World.TileSize, $"{tree.Species} trunk must be a little under one block wide ({trunkWidth}px).");
         }
+        Require(species.Count >= 3, $"The forest needs a mix of tree species ({string.Join(", ", species)}).");
 
         TreeInstance sample = _world.Trees[0];
-        Image art = TreeArt.Create(sample).GetImage();
-        Require(art.GetWidth() == TreeArt.WidthPixels && art.GetHeight() == TreeArt.HeightPixels(sample),
-            "Tree art must be authored at its drawn size so it is never stretched.");
-        int row = art.GetHeight() - 3 * World.TileSize, first = -1, last = -1;
-        for (int x = 0; x < art.GetWidth(); x++)
-            if (art.GetPixel(x, row).A > 0.5f) { if (first < 0) first = x; last = x; }
-        int trunkWidth = last - first + 1;
-        Require(trunkWidth >= 16 && trunkWidth < World.TileSize, $"The trunk must be a little under one block wide ({trunkWidth}px).");
-
         Require(_world.TreeAtTile(sample.TrunkColumn, sample.BaseRow - 1) == sample, "The trunk footprint must be targetable.");
         Require(_world.TreeAtTile(sample.TrunkColumn + 1, sample.BaseRow - 1) != sample
             && _world.TreeAtTile(sample.TrunkColumn - 1, sample.BaseRow - 1) != sample, "The trunk footprint is exactly one block wide.");
@@ -226,6 +231,31 @@ public partial class TerrainScaleSmoke : Node
         int remaining = 0;
         foreach (Node child in atmosphere.GetChildren()) if (child is Sprite2D && !child.IsQueuedForDeletion()) remaining++;
         Require(remaining == _world.Trees.Count - 1, "Felling a tree removes its sprite.");
+    }
+
+    private void CheckProps()
+    {
+        var sheet = GD.Load<Texture2D>("res://assets/tiles/tile_sheet.png");
+        Require(sheet.GetWidth() == 4 * World.TileSize && sheet.GetHeight() == 10 * World.TileSize,
+            "The tile sheet holds 4 variants of 10 block types at the native 24px size.");
+
+        Require(_world.Props.Count > 60, $"The forest floor needs ground cover ({_world.Props.Count}).");
+        var kinds = new HashSet<string>();
+        var big = new List<PropInstance>();
+        foreach (PropInstance prop in _world.Props)
+        {
+            kinds.Add(prop.Art.Kind);
+            Require(_world.IsSolid(prop.Column, prop.BaseRow) && !_world.IsSolid(prop.Column, prop.BaseRow - 1), "Props must stand on the ground.");
+            if (prop.Art.Big) big.Add(prop);
+        }
+        Require(kinds.Count >= 6, $"Needs a variety of props ({string.Join(", ", kinds)}).");
+        big.Sort((a, b) => a.CenterX.CompareTo(b.CenterX));
+        for (int i = 1; i < big.Count; i++)
+            Require(big[i].CenterX - big[i].Art.Region.Size.X / 2f >= big[i - 1].CenterX + big[i - 1].Art.Region.Size.X / 2f - 0.5f,
+                "Large props must not overlap.");
+        foreach (PropInstance prop in big)
+            foreach (TreeInstance tree in _world.Trees)
+                Require(Mathf.Abs(prop.CenterX - tree.Root.X) > prop.Art.Region.Size.X / 2f + 10f, "Large props keep clear of tree trunks.");
     }
 
     private void CheckCaves(bool printMap)

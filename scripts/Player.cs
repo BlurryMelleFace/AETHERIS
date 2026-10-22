@@ -15,7 +15,7 @@ public partial class Player : CharacterBody2D
     private const float StepHeight = World.TileSize + 1f;
 
     private const float Acceleration = 2400f;
-    private const float IconPixel = HeroSprite.PixelScale;
+    private const float IconScale = 2f;
 
     [Export] public float WalkSpeed { get; set; } = 170f;
     [Export] public float SprintSpeed { get; set; } = 290f;
@@ -47,7 +47,7 @@ public partial class Player : CharacterBody2D
     private bool Holding => Equipment.Current != ItemCatalog.Hand;
 
     // The icon's grip (handle) is at pixel (8, 11.5) and its flame at (8, 1.5).
-    private Vector2 FlamePosition => _hero.HandPosition + new Vector2(0f, -10f * IconPixel);
+    private Vector2 FlamePosition => _hero.HandPosition + new Vector2(0f, -10f * IconScale);
 
     public override void _Ready()
     {
@@ -166,15 +166,15 @@ public partial class Player : CharacterBody2D
         if (!Holding) return;
         // Drawn under the hero so the fingers wrap the handle; the icon pixels match the hero's pixel size.
         Vector2 hand = _hero.HandPosition;
-        float size = PixelPen.Size * IconPixel;
-        Vector2 grip = new Vector2(8f, 11.5f) * IconPixel;
+        float size = PixelPen.Size * IconScale;
+        Vector2 grip = new Vector2(8f, 11.5f) * IconScale;
         var origin = new Vector2(_facing > 0f ? hand.X - grip.X : hand.X + grip.X, hand.Y - grip.Y);
         DrawTextureRect(held.Icon, new Rect2(origin, new Vector2(_facing > 0f ? size : -size, size)), false);
         if (held.LightStrength > 0f)
         {
             // Flame tongue that dances with the light.
             float lick = Mathf.Sin(_time * 14f) + (HeldLightFlicker - 1f) * 8f;
-            DrawRect(new Rect2(hand.X - 1.5f + Mathf.Round(lick), hand.Y - 10f * IconPixel - 3f - Mathf.Round(Mathf.Abs(lick) * 1.5f), 3, 3),
+            DrawRect(new Rect2(hand.X - 2f + Mathf.Round(lick), hand.Y - 10f * IconScale - 4f - Mathf.Round(Mathf.Abs(lick) * 2f), 4, 4),
                 new Color("#ffd466"));
         }
     }

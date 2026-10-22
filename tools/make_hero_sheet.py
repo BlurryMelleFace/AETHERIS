@@ -15,13 +15,15 @@ import sys
 import numpy as np
 from PIL import Image, ImageDraw
 
-FRAME = 56
+LOGICAL_FRAME = 56
+SS = 1.5  # drawing is authored in logical units and rendered 1.5x finer so one art pixel = one world pixel
+FRAME = int(round(LOGICAL_FRAME * SS))
 MARGIN_X, MARGIN_Y = 4, 8  # drawing coordinates are 0..48; the frame adds headroom around them
 COLUMNS = 6
 ROWS = ["idle", "walk", "run", "jump", "attack"]
 
 YY, XX = np.mgrid[0:FRAME, 0:FRAME]
-PX, PY = XX + 0.5 - MARGIN_X, YY + 0.5 - MARGIN_Y
+PX, PY = (XX + 0.5) / SS - MARGIN_X, (YY + 0.5) / SS - MARGIN_Y
 
 
 def hexc(value):
@@ -89,7 +91,7 @@ def ellipse(center, rx, ry, degrees=0.0):
 
 def polygon(points):
     image = Image.new("L", (FRAME, FRAME), 0)
-    ImageDraw.Draw(image).polygon([(x - 0.5 + MARGIN_X, y - 0.5 + MARGIN_Y) for x, y in points], fill=255)
+    ImageDraw.Draw(image).polygon([((x + MARGIN_X) * SS - 0.5, (y + MARGIN_Y) * SS - 0.5) for x, y in points], fill=255)
     return np.array(image) > 0
 
 
@@ -134,9 +136,10 @@ class Canvas:
 
     def pixels(self, points, color):
         for x, y in points:
-            ix, iy = int(math.floor(x + MARGIN_X)), int(math.floor(y + MARGIN_Y))
-            if 0 <= ix < FRAME and 0 <= iy < FRAME and self.filled[iy, ix]:
-                self.rgb[iy, ix] = color
+            ix, iy = int(math.floor((x + MARGIN_X) * SS)), int(math.floor((y + MARGIN_Y) * SS))
+            block = self.filled[iy:iy + 2, ix:ix + 2]
+            region = self.rgb[iy:iy + 2, ix:ix + 2]
+            region[block] = color
 
     def mask_pixels(self, mask, color, only_filled=True):
         target = mask & self.filled if only_filled else mask
@@ -422,7 +425,7 @@ def render(row, frame, hold=False):
         hand = draw_arm(canvas, add(shoulder, scale(front, 0.4)), HOLD_ARM, far=False)
     else:
         draw_arm(canvas, add(shoulder, scale(front, 0.4)), spec["near_arm"], far=False)
-    anchor = None if hand is None else [round(hand[0] + MARGIN_X, 2), round(hand[1] + MARGIN_Y, 2)]
+    anchor = None if hand is None else [round((hand[0] + MARGIN_X) * SS, 2), round((hand[1] + MARGIN_Y) * SS, 2)]
     return canvas.finish(), anchor
 
 
