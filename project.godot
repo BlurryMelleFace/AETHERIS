@@ -24,6 +24,10 @@ window/stretch/mode="canvas_items"
 
 project/assembly_name="AETHERIS"
 
+[physics]
+
+common/physics_interpolation=true
+
 [rendering]
 
 renderer/rendering_method="gl_compatibility"

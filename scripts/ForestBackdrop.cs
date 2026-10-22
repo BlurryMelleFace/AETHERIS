@@ -40,6 +40,8 @@ public partial class ForestBackdrop : Node2D
     public override void _Ready()
     {
         ZIndex = -10;
+        // Distant scenery is not lit by the player's torch.
+        LightMask = 2;
         TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
         QueueRedraw();
     }

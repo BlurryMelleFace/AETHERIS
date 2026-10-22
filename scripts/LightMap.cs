@@ -4,8 +4,8 @@ using System.Collections.Generic;
 namespace Aetheris;
 
 /// <summary>
-/// Terraria-style limited visibility: sky light enters from open air and a small
-/// player light spreads around the character; everything else stays dark.
+/// Terraria-style limited visibility: sky light enters from open air and held light
+/// sources (torch) spread around them; everything else stays dark.
 /// </summary>
 public partial class LightMap : Node2D
 {
@@ -13,7 +13,6 @@ public partial class LightMap : Node2D
     [Export(PropertyHint.Range, "0.3,0.95,0.01")] public float AirFalloff { get; set; } = 0.68f;
     [Export(PropertyHint.Range, "0.1,0.9,0.01")] public float SolidFalloff { get; set; } = 0.45f;
     [Export(PropertyHint.Range, "0.5,1,0.01")] public float SurfaceFalloff { get; set; } = 0.92f;
-    [Export(PropertyHint.Range, "0.1,1,0.01")] public float PlayerLight { get; set; } = 1f;
 
     private const int W = World.Width;
     private const int H = World.Height;
@@ -27,10 +26,11 @@ public partial class LightMap : Node2D
     private readonly byte[] _pixels = new byte[W * H * 4];
     private readonly Queue<Vector2I> _queue = new();
     private World? _world;
-    private Node2D? _player;
+    private Player? _player;
     private Image? _image;
     private ImageTexture? _texture;
-    private Vector2I _lastPlayerTile = new(int.MinValue, int.MinValue);
+    private Vector2I _lastOrigin = new(int.MinValue, int.MinValue);
+    private float _lastStrength = -1f;
     private bool _skyDirty = true;
 
     public override void _Ready()
@@ -38,7 +38,7 @@ public partial class LightMap : Node2D
         ZIndex = 10;
         TextureFilter = CanvasItem.TextureFilterEnum.Linear;
         _world = GetParent().GetNodeOrNull<World>("World");
-        _player = GetParent().GetNodeOrNull<Node2D>("Player");
+        _player = GetParent().GetNodeOrNull<Player>("Player");
         if (_world != null) _world.TilesChanged += () => _skyDirty = true;
     }
 
@@ -47,14 +47,18 @@ public partial class LightMap : Node2D
     public override void _Process(double delta)
     {
         if (_world == null || _player == null) return;
-        Vector2I tile = new(Mathf.FloorToInt(_player.GlobalPosition.X / World.TileSize),
-            Mathf.FloorToInt(_player.GlobalPosition.Y / World.TileSize));
-        if (!_skyDirty && tile == _lastPlayerTile) return;
+        float strength = _player.HeldLight;
+        Vector2 at = _player.HeldLightOrigin;
+        Vector2I origin = new(Mathf.FloorToInt(at.X / World.TileSize), Mathf.FloorToInt(at.Y / World.TileSize));
+        bool moved = origin != _lastOrigin || strength != _lastStrength;
+        // A held flame needs a fresh upload every frame so the flicker shows.
+        if (!_skyDirty && !moved && strength <= 0f) return;
 
         if (_skyDirty) ComputeSky();
-        _lastPlayerTile = tile;
-        ComputeTorch(tile);
-        UploadTexture();
+        if (_skyDirty || moved) ComputeTorch(origin, strength);
+        _lastOrigin = origin;
+        _lastStrength = strength;
+        UploadTexture(strength > 0f ? _player.HeldLightFlicker : 1f);
         _skyDirty = false;
         QueueRedraw();
     }
@@ -74,12 +78,12 @@ public partial class LightMap : Node2D
         Spread(_sky);
     }
 
-    private void ComputeTorch(Vector2I origin)
+    private void ComputeTorch(Vector2I origin, float strength)
     {
         System.Array.Clear(_torch);
         _queue.Clear();
-        if (origin.X < 0 || origin.X >= W || origin.Y < 0 || origin.Y >= H) return;
-        _torch[origin.X, origin.Y] = PlayerLight;
+        if (strength <= 0f || origin.X < 0 || origin.X >= W || origin.Y < 0 || origin.Y >= H) return;
+        _torch[origin.X, origin.Y] = strength;
         _queue.Enqueue(origin);
         Spread(_torch);
     }
@@ -105,12 +109,12 @@ public partial class LightMap : Node2D
         }
     }
 
-    private void UploadTexture()
+    private void UploadTexture(float torchFlicker)
     {
         for (int y = 0; y < H; y++)
         for (int x = 0; x < W; x++)
         {
-            float light = Mathf.Max(_sky[x, y], _torch[x, y]);
+            float light = Mathf.Max(_sky[x, y], _torch[x, y] * torchFlicker);
             float darkness = 1f - Mathf.Clamp((light - 0.06f) / 0.7f, 0f, 1f);
             _pixels[(y * W + x) * 4 + 3] = (byte)(darkness * 255f);
         }

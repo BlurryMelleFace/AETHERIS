@@ -99,11 +99,17 @@ public partial class LightMapSmoke : Node
                 { cave = new Vector2I(x, y); break; }
             Require(cave.X >= 0, "Test world must contain a cave.");
             player.GlobalPosition = new Vector2((cave.X + .5f) * World.TileSize, (cave.Y + .5f) * World.TileSize);
+            player.ResetPhysicsInterpolation();
             for (int i = 0; i < 90; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
-            Shoot(outDir, "2_cave");
 
             Vector2I at = new(Mathf.FloorToInt(player.GlobalPosition.X / World.TileSize),
                 Mathf.FloorToInt(player.GlobalPosition.Y / World.TileSize));
+            Require(light.LightAt(at.X, at.Y) < 0.05f, "The bare-handed character must not glow.");
+            Shoot(outDir, "2_cave_dark");
+            player.Equipment.Equip(ItemCatalog.Torch);
+            for (int i = 0; i < 30; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+            Shoot(outDir, "2_cave");
+
             Require(light.LightAt(at.X, at.Y) > 0.9f, "Player tile must be lit.");
             Require(light.LightAt(at.X + 12, at.Y) < 0.05f || light.LightAt(at.X - 12, at.Y) < 0.05f,
                 "Tiles 12 away in a cave must be dark.");
