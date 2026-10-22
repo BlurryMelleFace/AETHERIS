@@ -1,0 +1,8 @@
+.godot/
+bin/
+obj/
+.vs/
+.vscode/
+.DS_Store
+Thumbs.db
+*.user
