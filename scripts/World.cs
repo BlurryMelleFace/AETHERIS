@@ -25,9 +25,6 @@ public partial class World : Node2D
     public override void _Ready()
     {
         TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
-        string backdropPath = ResourceLoader.Exists(HighResBackdropPath)
-            ? HighResBackdropPath : PreviewBackdropPath;
-        _backdrop = GD.Load<Texture2D>(backdropPath);
         _player = GetParent().GetNodeOrNull<Node2D>("Player");
         _caveNoise.Seed = Seed;
         _caveNoise.Frequency = 0.072f;
@@ -125,32 +122,13 @@ public partial class World : Node2D
     private static readonly Texture2D PineArt = GD.Load<Texture2D>("res://assets/foliage/pine_64x128.svg");
     private static readonly Texture2D FoliageArt = GD.Load<Texture2D>("res://assets/foliage/grass_clump_32.svg");
 
-    private const string HighResBackdropPath = "res://assets/backgrounds/AETHERIS_MountainBackdrop.png";
-    private const string PreviewBackdropPath = "res://assets/backgrounds/moody_snowy_forest_96.png";
-    private Texture2D? _backdrop;
 
     private float _time;
 
     public override void _Draw()
     {
         float worldWidth = Width * TileSize;
-        // Camera-anchored panorama: dramatic, full-res scenery instead of an
-        // extremely low-res tile stretched over the whole playfield.
-        // The shared CanvasModulate grades backdrop and foreground together.
-        if (_backdrop != null)
-        {
-            // Visible world area is approximately 914x514 at current 1.4x camera zoom.
-            // Overscan prevents empty edges during movement.
-            float focusX = _player?.GlobalPosition.X ?? 400f;
-            float focusY = _player?.GlobalPosition.Y ?? 430f;
-            const float displayWidth = 1250f;
-            const float displayHeight = 703f;
-            float drift = Mathf.Sin(focusX * 0.0004f) * 65f;
-            float left = focusX - displayWidth / 2f + drift;
-            float top = focusY - 490f;
-            DrawTextureRect(_backdrop,
-                new Rect2(left, top, displayWidth, displayHeight), false);
-        }
+        // Editable procedural backdrop is drawn by the separate ForestBackdrop node.
         // Atmospheric haze connects mountain distance to the playable foreground.
         for (int i = 0; i < 5; i++)
         {
