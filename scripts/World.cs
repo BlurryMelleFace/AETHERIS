@@ -22,6 +22,10 @@ public partial class World : Node2D
     private readonly FastNoiseLite _caveNoise = new();
     private Node2D? _player;
 
+    public event Action? TilesChanged;
+
+    public bool IsSolid(int x, int y) => InBounds(new Vector2I(x, y)) && _tiles[x, y] != 0;
+
     public override void _Ready()
     {
         TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
@@ -107,6 +111,7 @@ public partial class World : Node2D
         _tiles[tile.X, tile.Y] = value;
         if (_colliders.Remove(tile, out var old)) old.QueueFree();
         if (value != 0) AddCollision(tile);
+        TilesChanged?.Invoke();
         QueueRedraw();
     }
 
