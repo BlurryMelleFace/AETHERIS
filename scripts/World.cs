@@ -349,10 +349,19 @@ public partial class World : Node2D
         return ratio <= 0f ? 0 : Mathf.Clamp(Mathf.CeilToInt(ratio * 3f), 1, 3);
     }
 
+    /// <summary>The standing tree (or stump) rooted in this block, if any; its ground cannot be mined away.</summary>
+    public TreeInstance? TreeRootedAt(int x, int y)
+    {
+        foreach (TreeInstance tree in _trees)
+            if (!tree.Felled && tree.TrunkColumn == x && tree.BaseRow == y) return tree;
+        return null;
+    }
+
     /// <summary>Applies one pickaxe swing to a block; returns true when the block breaks.</summary>
     public bool HitTile(Vector2I tile, float power)
     {
         if (!InBounds(tile) || _tiles[tile.X, tile.Y] == 0) return false;
+        if (TreeRootedAt(tile.X, tile.Y) != null) return false;
         byte id = _tiles[tile.X, tile.Y];
         float total = (_damage.TryGetValue(tile, out var entry) ? entry.damage : 0f) + power;
         Vector2 center = new((tile.X + 0.5f) * TileSize, (tile.Y + 0.5f) * TileSize);

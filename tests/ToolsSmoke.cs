@@ -73,6 +73,9 @@ public partial class ToolsSmoke : Node
             Require(candidates.Count >= 3, "The forest has trees tall enough to chop.");
             TreeInstance low = candidates[0], high = candidates[1], held = candidates[2];
 
+            Require(_world.TreeRootedAt(low.TrunkColumn, low.BaseRow) == low, "A tree is rooted in the block under its trunk.");
+            for (int i = 0; i < 8; i++) Require(!_world.HitTile(new Vector2I(low.TrunkColumn, low.BaseRow), 1f), "A block under a tree cannot be mined.");
+            Require(_world.IsSolid(low.TrunkColumn, low.BaseRow), "The block under a tree stays.");
             // The pickaxe cannot chop and the axe misses the canopy above the trunk.
             Require(!_world.HitTree(low, low.BaseRow - 1 - low.Variant.TrunkRows, 1f, 1f), "Only trunk blocks can be chopped.");
             int falling = FallingCount();
@@ -88,6 +91,8 @@ public partial class ToolsSmoke : Node
             Require(FallingCount() == falling, "The fallen tree clears away after landing.");
             for (int i = 0; i < 4; i++) _world.HitTree(low, low.BaseRow - 1, 1f, 1f);
             Require(low.Felled && _world.TreeAtTile(low.TrunkColumn, low.BaseRow - 1) == null, "Chopping the stump removes it.");
+            Require(_world.HitTile(new Vector2I(low.TrunkColumn, low.BaseRow), 9f), "Once the tree is gone its block can be mined.");
+            _world.SetTile(new Vector2I(low.TrunkColumn, low.BaseRow), 1);
 
             // Cutting further up fells only the part above the cut; the lower trunk stays standing.
             int cutBlock = 3;
