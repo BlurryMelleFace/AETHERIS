@@ -24,6 +24,7 @@ public partial class World : Node2D
 
     public override void _Ready()
     {
+        TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
         _player = GetParent().GetNodeOrNull<Node2D>("Player");
         _caveNoise.Seed = Seed;
         _caveNoise.Frequency = 0.072f;
