@@ -5,41 +5,42 @@ namespace Aetheris;
 
 public partial class TreeAtmosphere : Node2D
 {
-    private static readonly Texture2D PineArt = GD.Load<Texture2D>("res://assets/foliage/pine_64x128.svg");
     private static readonly Shader FoliageShader = GD.Load<Shader>("res://assets/foliage/tree_wind.gdshader");
-    private readonly List<Vector2> _roots = new();
-    private readonly List<ShaderMaterial> _materials = new();
+    private readonly List<TreeInstance> _trees = new();
+    private readonly Dictionary<TreeInstance, (Sprite2D sprite, ShaderMaterial material)> _visuals = new();
     private World _world = null!;
     private DayNightCycle? _cycle;
     private double _seconds;
 
-    public void Setup(World world, IEnumerable<Vector2> roots)
+    public void Setup(World world, IEnumerable<TreeInstance> trees)
     {
         _world = world;
-        _roots.AddRange(roots);
+        _trees.AddRange(trees);
     }
 
     public override void _Ready()
     {
         _cycle = _world.GetParent().GetNodeOrNull<DayNightCycle>("DayNightCycle");
-        foreach (Vector2 root in _roots)
+        foreach (TreeInstance tree in _trees)
         {
-            int column = Mathf.FloorToInt(root.X / World.TileSize);
-            float height = 115 + column % 7 * 10;
-            float width = 72 + column % 3 * 8;
             var material = new ShaderMaterial { Shader = FoliageShader };
-            var tree = new Sprite2D
+            ImageTexture texture = TreeArt.Create(tree);
+            var sprite = new Sprite2D
             {
-                Texture = PineArt,
-                Position = root,
-                Offset = new Vector2(0, -64),
-                Scale = new Vector2(width / 64f, height / 128f),
-                Material = material
+                Texture = texture,
+                Position = tree.Root,
+                Offset = new Vector2(0, -texture.GetHeight() / 2f + TreeArt.Embed),
+                Material = material,
+                ZIndex = -1 // trees stay in the background, behind the ground tiles
             };
-            material.SetShaderParameter("tree_phase", column * 0.73f);
-            AddChild(tree);
-            _materials.Add(material);
+            material.SetShaderParameter("tree_phase", tree.Id * 0.73f);
+            AddChild(sprite);
+            _visuals[tree] = (sprite, material);
         }
+        _world.TreeFelled += tree =>
+        {
+            if (_visuals.Remove(tree, out var visual)) visual.sprite.QueueFree();
+        };
         _Process(0);
     }
 
@@ -73,11 +74,11 @@ public partial class TreeAtmosphere : Node2D
     {
         _seconds += delta;
         float sunDirection = Mathf.Cos((_cycle?.Phase ?? 0.25f) * Mathf.Tau);
-        for (int index = 0; index < _materials.Count; index++)
+        foreach (var (tree, visual) in _visuals)
         {
-            ShaderMaterial material = _materials[index];
+            ShaderMaterial material = visual.material;
             material.SetShaderParameter("wind_time", (float)_seconds);
-            material.SetShaderParameter("wind_strength", WindAt(_roots[index].X, _seconds));
+            material.SetShaderParameter("wind_strength", WindAt(tree.Root.X, _seconds));
             material.SetShaderParameter("sun_direction", sunDirection);
             material.SetShaderParameter("daylight", _cycle?.Daylight ?? 1f);
         }
@@ -88,36 +89,36 @@ public partial class TreeAtmosphere : Node2D
     {
         float daylight = _cycle?.Daylight ?? 1f;
         float direction = Mathf.Cos((_cycle?.Phase ?? 0.25f) * Mathf.Tau);
-        foreach (Vector2 root in _roots)
+        foreach (TreeInstance tree in _trees)
         {
-            int column = Mathf.FloorToInt(root.X / World.TileSize);
-            int ground = Mathf.RoundToInt(root.Y / World.TileSize);
-            if (!_world.IsSolid(column, ground)) continue;
-            float length = 22f + Mathf.Abs(direction) * 62f;
+            if (tree.Felled) continue;
+            Vector2 root = tree.Root;
+            int ground = tree.BaseRow;
+            float length = 70f + Mathf.Abs(direction) * 170f;
             float wind = WindAt(root.X, _seconds);
             for (int sample = -2; sample <= 12; sample++)
             {
                 float progress = (sample + 2) / 14f;
-                float horizontal = root.X + direction * (progress * length - 8f)
-                    + wind * progress * 4f;
+                float horizontal = root.X + direction * (progress * length - 24f)
+                    + wind * progress * 8f;
                 int shadowColumn = Mathf.FloorToInt(horizontal / World.TileSize);
                 if (!_world.IsSolid(shadowColumn, ground) || _world.IsSolid(shadowColumn, ground - 1)) continue;
                 float opacity = (0.045f + daylight * 0.075f) * (1f - progress);
-                DrawRect(new Rect2(horizontal - 5f, root.Y + 1f, 10f, 5f),
+                DrawRect(new Rect2(horizontal - 14f, root.Y + 1f, 28f, 8f),
                     new Color(0.10f, 0.16f, 0.17f, opacity));
-                DrawRect(new Rect2(horizontal - 3f, root.Y + 1f, 6f, 2f),
+                DrawRect(new Rect2(horizontal - 8f, root.Y + 1f, 16f, 3f),
                     new Color(0.08f, 0.13f, 0.14f, opacity));
             }
         }
 
         float width = World.Width * World.TileSize;
-        for (int wisp = 0; wisp < 12; wisp++)
+        for (int wisp = 0; wisp < 16; wisp++)
         {
             float horizontal = Mathf.PosMod((float)(_seconds * 180.0) + wisp * 317f, width);
             float gust = GustAt(horizontal, _seconds);
             if (gust < 0.22f) continue;
-            float vertical = 300f + wisp % 4 * 27f + Mathf.Sin((float)_seconds * 0.7f + wisp) * 9f;
-            float length = 18f + gust * 28f;
+            float vertical = 140f + wisp % 6 * 45f + Mathf.Sin((float)_seconds * 0.7f + wisp) * 9f;
+            float length = 30f + gust * 50f;
             for (int segment = 0; segment < 4; segment++)
             {
                 float start = segment / 4f;

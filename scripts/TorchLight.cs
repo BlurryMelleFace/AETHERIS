@@ -5,7 +5,7 @@ namespace Aetheris;
 /// <summary>Warm flickering point light that follows the held item; strength 0 means no light at all.</summary>
 public partial class TorchLight : Node2D
 {
-    private const float RadiusPixels = 200f;
+    private const float RadiusPixels = 290f;
     private readonly PointLight2D _light = new();
     private readonly FastNoiseLite _noise = new() { Frequency = 1f, NoiseType = FastNoiseLite.NoiseTypeEnum.Simplex };
     private DayNightCycle? _cycle;

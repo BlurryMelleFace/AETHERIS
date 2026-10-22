@@ -39,9 +39,11 @@ public partial class LightMapSmoke : Node
 
             var atmosphere = world.GetNode<TreeAtmosphere>("TreeAtmosphere");
             var originalTree = atmosphere.GetChild<Sprite2D>(0);
+            int textureHeight = originalTree.Texture.GetHeight();
+            const int baseY = 450, centerX = 160;
             var probe = new SubViewport
             {
-                Size = new Vector2I(256, 256),
+                Size = new Vector2I(320, 480),
                 World2D = new World2D(),
                 RenderTargetUpdateMode = SubViewport.UpdateMode.Always
             };
@@ -51,8 +53,8 @@ public partial class LightMapSmoke : Node
             {
                 Texture = originalTree.Texture,
                 TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
-                Position = new Vector2(128, 220),
-                Offset = new Vector2(0, -64),
+                Position = new Vector2(centerX, baseY),
+                Offset = new Vector2(0, -textureHeight / 2f),
                 Material = material
             };
             probe.AddChild(tree);
@@ -68,37 +70,46 @@ public partial class LightMapSmoke : Node
             Image windyTree = probe.GetTexture().GetImage();
             int changedCanopy = 0;
             int visibleTree = 0;
-            for (int vertical = 92; vertical < 220; vertical++)
-            for (int horizontal = 90; horizontal < 166; horizontal++)
+            int canopyTop = baseY - textureHeight + 10, canopyBottom = baseY - (int)(textureHeight * 0.3f);
+            for (int vertical = canopyTop; vertical < baseY; vertical++)
+            for (int horizontal = centerX - 100; horizontal < centerX + 100; horizontal++)
             {
                 Color calm = calmTree.GetPixel(horizontal, vertical);
                 Color windy = windyTree.GetPixel(horizontal, vertical);
                 if (calm.R + calm.G + calm.B > 0.1f) visibleTree++;
-                if (vertical < 200 && calm != windy) changedCanopy++;
-                if (vertical >= 218) Require(calm == windy, "Wind must leave the tree root anchored.");
+                if (vertical < canopyBottom && calm != windy) changedCanopy++;
+                if (vertical >= baseY - 3)
+                    Require(Mathf.Abs(calm.R - windy.R) + Mathf.Abs(calm.G - windy.G) + Mathf.Abs(calm.B - windy.B) < 0.03f,
+                        $"Wind must leave the tree root anchored (x={horizontal}, y={vertical}, {calm} vs {windy}).");
             }
-            Require(visibleTree > 300 && changedCanopy > 30,
+            Require(visibleTree > 3000 && changedCanopy > 300,
                 "The tree shader must render visible foliage and move the canopy.");
             material.SetShaderParameter("sun_direction", 0.8f);
             await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
             Image relitTree = probe.GetTexture().GetImage();
             int changedShading = 0;
-            for (int vertical = 100; vertical < 210; vertical++)
-            for (int horizontal = 96; horizontal < 160; horizontal++)
+            for (int vertical = canopyTop; vertical < canopyBottom; vertical++)
+            for (int horizontal = centerX - 100; horizontal < centerX + 100; horizontal++)
                 if (relitTree.GetPixel(horizontal, vertical) != windyTree.GetPixel(horizontal, vertical)) changedShading++;
-            Require(changedShading > 100, "Directional foliage shading must respond to the sun.");
+            Require(changedShading > 300, "Directional foliage shading must respond to the sun.");
             calmTree.SavePng($"{outDir}/tree_calm.png");
             windyTree.SavePng($"{outDir}/tree_gust.png");
             probe.QueueFree();
 
-            // Find a cave pocket well below the surface.
+            // Find a cave pocket that fits the 3x6 block character.
             Vector2I cave = new(-1, -1);
-            for (int y = 32; y < World.Height - 2 && cave.X < 0; y++)
-            for (int x = 10; x < World.Width - 10; x++)
-                if (!world.IsSolid(x, y) && world.IsSolid(x, y + 1) && !world.IsSolid(x, y - 1))
-                { cave = new Vector2I(x, y); break; }
-            Require(cave.X >= 0, "Test world must contain a cave.");
-            player.GlobalPosition = new Vector2((cave.X + .5f) * World.TileSize, (cave.Y + .5f) * World.TileSize);
+            for (int y = 40; y < World.Height - 4 && cave.X < 0; y++)
+            for (int x = 10; x < World.Width - 10 && cave.X < 0; x++)
+            {
+                bool fits = true;
+                for (int dx = 0; dx < 3 && fits; dx++)
+                for (int dy = 0; dy < 8 && fits; dy++)
+                    if (world.IsSolid(x + dx, y - dy)) fits = false;
+                if (fits && world.IsSolid(x + 1, y + 1)) cave = new Vector2I(x, y);
+            }
+            Require(cave.X >= 0, "Test world must contain a cave the character fits in.");
+            player.GlobalPosition = new Vector2((cave.X + 1.5f) * World.TileSize, cave.Y * World.TileSize - Player.BodySize.Y / 2f - 2f);
+            player.Velocity = Vector2.Zero;
             player.ResetPhysicsInterpolation();
             for (int i = 0; i < 90; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 
@@ -110,9 +121,12 @@ public partial class LightMapSmoke : Node
             for (int i = 0; i < 30; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
             Shoot(outDir, "2_cave");
 
-            Require(light.LightAt(at.X, at.Y) > 0.9f, "Player tile must be lit.");
-            Require(light.LightAt(at.X + 12, at.Y) < 0.05f || light.LightAt(at.X - 12, at.Y) < 0.05f,
-                "Tiles 12 away in a cave must be dark.");
+            Vector2 flame = player.HeldLightOrigin;
+            Require(light.LightAt(Mathf.FloorToInt(flame.X / World.TileSize), Mathf.FloorToInt(flame.Y / World.TileSize)) > 0.9f,
+                "The torch tile must be lit.");
+            Require(light.LightAt(at.X, at.Y) > 0.5f, "The holder's tile must be lit by the torch.");
+            Require(light.LightAt(Mathf.Min(at.X + 14, World.Width - 1), at.Y) < 0.05f || light.LightAt(Mathf.Max(at.X - 14, 0), at.Y) < 0.05f,
+                "Tiles 14 away in a cave must be dark.");
             Require(light.LightAt(10, 0) > 0.99f, "Open sky must be lit.");
 
             // A built shelter must shade its interior but keep outer faces lit.

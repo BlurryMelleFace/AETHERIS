@@ -1,0 +1,38 @@
+using Godot;
+
+namespace Aetheris;
+
+/// <summary>A background tree. The trunk footprint is tile-aligned so chopping can target it later.</summary>
+public sealed class TreeInstance
+{
+    public const int TrunkTiles = 2;
+
+    public TreeInstance(int id, int trunkColumn, int baseRow, int heightTiles)
+    {
+        Id = id;
+        TrunkColumn = trunkColumn;
+        BaseRow = baseRow;
+        HeightTiles = heightTiles;
+    }
+
+    public int Id { get; }
+
+    /// <summary>Left column of the 2-block-wide trunk.</summary>
+    public int TrunkColumn { get; }
+
+    /// <summary>First ground row under the trunk.</summary>
+    public int BaseRow { get; }
+
+    public int HeightTiles { get; }
+    public bool Felled { get; set; }
+
+    /// <summary>Rows of bare trunk above the ground before the canopy starts.</summary>
+    public int BareTrunkRows => Mathf.Max(3, Mathf.RoundToInt(HeightTiles * 0.3f));
+
+    /// <summary>Ground contact point at the centre of the trunk.</summary>
+    public Vector2 Root => new((TrunkColumn + TrunkTiles / 2f) * World.TileSize, BaseRow * World.TileSize);
+
+    public bool OccupiesTrunk(int x, int y) =>
+        !Felled && x >= TrunkColumn && x < TrunkColumn + TrunkTiles
+        && y >= BaseRow - BareTrunkRows && y < BaseRow;
+}

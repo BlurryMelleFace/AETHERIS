@@ -6,10 +6,10 @@
 [ext_resource type="Script" uid="uid://dd44f7hctit66" path="res://scripts/ForestBackdrop.cs" id="4_backdrop"]
 [ext_resource type="Script" uid="uid://dxgyesyl1t7bc" path="res://scripts/SkyBackdrop.cs" id="5_sky"]
 [ext_resource type="Script" uid="uid://vsodjp5d3hh7" path="res://scripts/LightMap.cs" id="6_light"]
-[ext_resource type="Script" path="res://scripts/RadialWheel.cs" id="7_wheel"]
+[ext_resource type="Script" uid="uid://dle7vywepmia8" path="res://scripts/RadialWheel.cs" id="7_wheel"]
 
-[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_player"]
-radius = 9.0
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_player"]
+size = Vector2(62.4, 144)
 
 [node name="Main" type="Node2D"]
 
@@ -20,6 +20,7 @@ layer = -1
 script = ExtResource("5_sky")
 
 [node name="ForestBackdrop" type="Node2D" parent="."]
+light_mask = 2
 z_index = -10
 texture_filter = 1
 script = ExtResource("4_backdrop")
@@ -28,14 +29,13 @@ script = ExtResource("4_backdrop")
 script = ExtResource("1_world")
 
 [node name="Player" type="CharacterBody2D" parent="."]
-position = Vector2(400, 250)
+position = Vector2(2880, 100)
 script = ExtResource("2_player")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Player"]
-shape = SubResource("CapsuleShape2D_player")
+shape = SubResource("RectangleShape2D_player")
 
 [node name="Camera2D" type="Camera2D" parent="Player"]
-zoom = Vector2(1.4, 1.4)
 position_smoothing_enabled = true
 
 [node name="LightMap" type="Node2D" parent="."]
@@ -46,12 +46,12 @@ script = ExtResource("3_cycle")
 
 [node name="UI" type="CanvasLayer" parent="."]
 
-[node name="RadialWheel" type="CanvasLayer" parent="."]
-script = ExtResource("7_wheel")
-
 [node name="Instructions" type="Label" parent="UI"]
 offset_left = 20.0
 offset_top = 20.0
 offset_right = 1250.0
 offset_bottom = 90.0
 text = "AETHERIS | LIVING FOREST | A/D move | Space jump | LMB mine | RMB place | Hold TAB item wheel | R reset"
+
+[node name="RadialWheel" type="CanvasLayer" parent="."]
+script = ExtResource("7_wheel")

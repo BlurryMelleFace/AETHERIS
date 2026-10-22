@@ -10,7 +10,7 @@ namespace Aetheris;
 public partial class LightMap : Node2D
 {
     // Per-step light multipliers; solid tiles absorb much more than air.
-    [Export(PropertyHint.Range, "0.3,0.95,0.01")] public float AirFalloff { get; set; } = 0.68f;
+    [Export(PropertyHint.Range, "0.3,0.95,0.01")] public float AirFalloff { get; set; } = 0.78f;
     [Export(PropertyHint.Range, "0.1,0.9,0.01")] public float SolidFalloff { get; set; } = 0.45f;
     [Export(PropertyHint.Range, "0.5,1,0.01")] public float SurfaceFalloff { get; set; } = 0.92f;
 

@@ -41,7 +41,7 @@ public partial class RadialWheelSmoke : Node
             await RealSeconds(0.4);
 
             // --- Smooth rendering of the slowed player (physics runs at ~6 ticks per second). ---
-            Teleport(new Vector2(400, 60));
+            Teleport(new Vector2(2880, 60));
             Press(Key.Tab, true);
             await RealSeconds(0.3);
             int frames = 0, moved = 0;
@@ -142,7 +142,7 @@ public partial class RadialWheelSmoke : Node
 
     private async Task<float> Fall(bool slow)
     {
-        Teleport(new Vector2(400, 60));
+        Teleport(new Vector2(2880, 60));
         if (slow) Press(Key.Tab, true);
         await RealSeconds(0.2);
         float start = _player.GlobalPosition.Y;

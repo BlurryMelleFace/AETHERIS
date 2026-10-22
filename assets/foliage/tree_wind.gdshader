@@ -5,12 +5,15 @@ uniform float wind_strength = 0.0;
 uniform float tree_phase = 0.0;
 uniform float sun_direction = 0.0;
 uniform float daylight = 1.0;
+uniform float sway_pixels = 9.0;
 varying vec4 tree_color;
 
 void vertex() {
     tree_color = COLOR;
     float height_weight = 1.0 - UV.y;
-    VERTEX.x += height_weight * height_weight * wind_strength * 4.0;
+    // The lowest tenth of the tree is rooted and never moves.
+    float bend = max(height_weight - 0.1, 0.0) / 0.9;
+    VERTEX.x += bend * bend * wind_strength * sway_pixels;
 }
 
 void fragment() {

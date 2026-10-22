@@ -32,7 +32,7 @@ public partial class TileChunk : Node2D
             if (id == 0)
             {
                 // Enclosed air gets a cave wall instead of the forest backdrop.
-                if (_world.IsEnclosed(x, y)) DrawRect(cell, new Color(.17f, .13f, .11f));
+                if (_world.IsEnclosed(x, y)) DrawRect(cell, new Color(.25f, .2f, .16f));
                 continue;
             }
             bool exposed = y == 0 || _world.GetTile(x, y - 1) == 0;

@@ -11,21 +11,43 @@ namespace Aetheris;
 public partial class World : Node2D
 {
     public const int TileSize = 24;
-    public const int Width = 160;
-    public const int Height = 60;
+    public const int Width = 240;
+    public const int Height = 80;
     private const int Seed = 10421;
     private const int GroundStart = 19;
+    private const float ReachTiles = 9f;
+    private const float TunnelWidth = 0.13f;
+    private const float CavernThreshold = 0.3f;
+    private static readonly RectangleShape2D TileShape = new() { Size = new Vector2(TileSize, TileSize) };
     private readonly byte[,] _tiles = new byte[Width, Height];
     private readonly int[] _surface = new int[Width];
     private readonly Dictionary<Vector2I, StaticBody2D> _colliders = new();
-    private readonly List<int> _trees = new();
+    private readonly List<TreeInstance> _trees = new();
     private readonly FastNoiseLite _caveNoise = new();
+    private readonly FastNoiseLite _cavernNoise = new();
     private readonly int[] _firstSolid = new int[Width];
     private readonly TileChunk[,] _chunks = new TileChunk[
         (Width + TileChunk.Size - 1) / TileChunk.Size, (Height + TileChunk.Size - 1) / TileChunk.Size];
     private Node2D? _player;
 
     public event Action? TilesChanged;
+    public event Action<TreeInstance>? TreeFelled;
+
+    public IReadOnlyList<TreeInstance> Trees => _trees;
+
+    public TreeInstance? TreeAtTile(int x, int y)
+    {
+        foreach (TreeInstance tree in _trees)
+            if (tree.OccupiesTrunk(x, y)) return tree;
+        return null;
+    }
+
+    public void FellTree(TreeInstance tree)
+    {
+        if (tree.Felled) return;
+        tree.Felled = true;
+        TreeFelled?.Invoke(tree);
+    }
 
     public bool IsSolid(int x, int y) => InBounds(new Vector2I(x, y)) && _tiles[x, y] != 0;
 
@@ -38,18 +60,19 @@ public partial class World : Node2D
         TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
         _player = GetParent().GetNodeOrNull<Node2D>("Player");
         _caveNoise.Seed = Seed;
-        _caveNoise.Frequency = 0.072f;
+        _caveNoise.Frequency = 0.018f;
         _caveNoise.FractalType = FastNoiseLite.FractalTypeEnum.Fbm;
-        _caveNoise.FractalOctaves = 3;
+        _caveNoise.FractalOctaves = 2;
+        _cavernNoise.Seed = Seed + 1;
+        _cavernNoise.Frequency = 0.03f;
+        _cavernNoise.FractalType = FastNoiseLite.FractalTypeEnum.Fbm;
+        _cavernNoise.FractalOctaves = 2;
         Generate();
         for (int x = 0; x < Width; x++) _firstSolid[x] = FindFirstSolid(x);
         BuildColliders();
         BuildChunks();
-        var roots = new List<Vector2>();
-        foreach (int column in _trees)
-            roots.Add(new Vector2((column + 0.5f) * TileSize, _surface[column] * TileSize));
         var atmosphere = new TreeAtmosphere { Name = "TreeAtmosphere" };
-        atmosphere.Setup(this, roots);
+        atmosphere.Setup(this, _trees);
         AddChild(atmosphere);
         QueueRedraw();
     }
@@ -83,20 +106,33 @@ public partial class World : Node2D
     {
         var rng = new Random(Seed);
         for (int x = 0; x < Width; x++)
+            _surface[x] = GroundStart + (int)Math.Round(
+                4.5 * Math.Sin(x * 0.05) + 2.0 * Math.Sin(x * 0.17));
+
+        for (int x = 0; x < Width; x++)
         {
-            int surface = GroundStart + (int)Math.Round(
-                3.0 * Math.Sin(x * 0.075) + 1.8 * Math.Sin(x * 0.23));
-            _surface[x] = surface;
+            int surface = _surface[x];
             for (int y = surface; y < Height; y++)
             {
                 byte tile = y < surface + 2 ? (byte)1 :
                     y < surface + 9 ? (byte)2 : (byte)3;
-                bool cave = y > surface + 5 &&
-                    Math.Abs(_caveNoise.GetNoise2D(x, y)) > 0.36f;
+                // Winding tunnels plus open caverns, sized for a 3x6 block character.
+                bool cave = y > surface + 9 && y < Height - 3 &&
+                    (Math.Abs(_caveNoise.GetNoise2D(x, y)) < TunnelWidth
+                    || _cavernNoise.GetNoise2D(x, y) > CavernThreshold);
                 _tiles[x, y] = cave ? (byte)0 : tile;
             }
-            if (x > 5 && x < Width - 5 && rng.NextDouble() < 0.12)
-                _trees.Add(x);
+        }
+
+        // Trees need a 2-block trunk on near-level ground and some room from the previous tree.
+        int lastTree = -100;
+        for (int x = 8; x < Width - 10; x++)
+        {
+            if (x - lastTree < 7 || Math.Abs(_surface[x] - _surface[x + 1]) > 1) continue;
+            if (rng.NextDouble() > 0.22) continue;
+            int baseRow = Math.Max(_surface[x], _surface[x + 1]);
+            _trees.Add(new TreeInstance(_trees.Count, x, baseRow, 11 + rng.Next(5)));
+            lastTree = x;
         }
     }
 
@@ -112,9 +148,7 @@ public partial class World : Node2D
         var body = new StaticBody2D();
         body.Position = new Vector2((tile.X + 0.5f) * TileSize,
             (tile.Y + 0.5f) * TileSize);
-        body.AddChild(new CollisionShape2D {
-            Shape = new RectangleShape2D { Size = new Vector2(TileSize, TileSize) }
-        });
+        body.AddChild(new CollisionShape2D { Shape = TileShape });
         AddChild(body);
         _colliders[tile] = body;
     }
@@ -124,7 +158,7 @@ public partial class World : Node2D
         if (@event is InputEventMouseButton click && click.Pressed)
         {
             Vector2 mouse = GetGlobalMousePosition();
-            if (_player == null || mouse.DistanceTo(_player.GlobalPosition) > 150f) return;
+            if (_player == null || mouse.DistanceTo(_player.GlobalPosition) > ReachTiles * TileSize) return;
             Vector2I tile = new(Mathf.FloorToInt(mouse.X / TileSize),
                 Mathf.FloorToInt(mouse.Y / TileSize));
             if (!InBounds(tile)) return;
@@ -134,8 +168,7 @@ public partial class World : Node2D
             {
                 var tileRect = new Rect2(tile.X * TileSize, tile.Y * TileSize,
                     TileSize, TileSize);
-                if (tileRect.Intersects(new Rect2(_player.GlobalPosition - new Vector2(9, 15),
-                    new Vector2(18, 30)))) return;
+                if (tileRect.Intersects(new Rect2(_player.GlobalPosition - Player.BodySize / 2f, Player.BodySize))) return;
                 SetTile(tile, 1);
             }
         }
