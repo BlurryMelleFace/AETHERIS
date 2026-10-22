@@ -23,9 +23,6 @@ public partial class ForestBackdrop : Node2D
     [Export(PropertyHint.Range, "0,0.7,0.005")] public float NearForestParallax { get; set; } = 0.07f;
 
     [ExportGroup("Colors")]
-    [Export] public Color SkyTop { get; set; } = new("#26354b");
-    [Export] public Color SkyMid { get; set; } = new("#58657f");
-    [Export] public Color SkyHorizon { get; set; } = new("#ae8790");
     [Export] public Color Clouds { get; set; } = new("#8e8290");
     [Export] public Color FarMountain { get; set; } = new("#46536d");
     [Export] public Color MidMountain { get; set; } = new("#59677c");
@@ -63,7 +60,7 @@ public partial class ForestBackdrop : Node2D
         float top = cameraY - 660f;
         int step = Mathf.Max(2, PixelStep);
 
-        DrawSky(left, top, step);
+        // SkyBackdrop draws the sky on its own camera-independent canvas.
         DrawClouds(left, top, cameraX, step);
         DrawRidge(left, cameraX, cameraY, FarMountainParallax,
             FarMountain, .76f, 94, step);
@@ -74,20 +71,6 @@ public partial class ForestBackdrop : Node2D
         DrawForest(left, cameraX, cameraY, NearForestParallax,
             NearForest, 500f, 123f, 47f, step);
         DrawMist(left, cameraY, step);
-    }
-
-    private void DrawSky(float left, float top, int step)
-    {
-        const int bands = 54;
-        for (int i = 0; i < bands; i++)
-        {
-            float t = i / (float)(bands - 1);
-            Color c = t < .58f
-                ? SkyTop.Lerp(SkyMid, t / .58f)
-                : SkyMid.Lerp(SkyHorizon, (t - .58f) / .42f);
-            float y = top + i * ViewHeight / bands;
-            DrawRect(new Rect2(left, y, ViewWidth, ViewHeight / bands + 2), c);
-        }
     }
 
     private void DrawClouds(float left, float top, float cameraX, int step)

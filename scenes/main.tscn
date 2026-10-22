@@ -1,15 +1,22 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/World.cs" id="1_world"]
 [ext_resource type="Script" path="res://scripts/Player.cs" id="2_player"]
 [ext_resource type="Script" path="res://scripts/DayNightCycle.cs" id="3_cycle"]
 [ext_resource type="Script" path="res://scripts/ForestBackdrop.cs" id="4_backdrop"]
+[ext_resource type="Script" path="res://scripts/SkyBackdrop.cs" id="5_sky"]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_player"]
 radius = 9.0
 height = 30.0
 
 [node name="Main" type="Node2D"]
+
+[node name="Sky" type="CanvasLayer" parent="."]
+layer = -1
+
+[node name="SkyBackdrop" type="Node2D" parent="Sky"]
+script = ExtResource("5_sky")
 
 [node name="ForestBackdrop" type="Node2D" parent="."]
 script = ExtResource("4_backdrop")
@@ -32,6 +39,8 @@ position_smoothing_speed = 5.0
 
 [node name="DayNightCycle" type="CanvasModulate" parent="."]
 script = ExtResource("3_cycle")
+DayLengthSeconds = 120.0
+StartPhase = 0.0
 
 [node name="UI" type="CanvasLayer" parent="."]
 
