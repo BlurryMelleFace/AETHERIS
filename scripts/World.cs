@@ -156,10 +156,20 @@ public partial class World : Node2D
 
         // Mineable ground, with stone flecks and animated grass.
         for (int x = 0; x < Width; x++)
+        {
+        bool underground = false;
         for (int y = 0; y < Height; y++)
         {
             byte id = _tiles[x, y];
-            if (id == 0) continue;
+            if (id == 0)
+            {
+                // Enclosed air gets a cave wall instead of the forest backdrop.
+                if (underground)
+                    DrawRect(new Rect2(x * TileSize, y * TileSize, TileSize, TileSize),
+                        new Color(.17f, .13f, .11f));
+                continue;
+            }
+            underground = true;
             Vector2 at = new(x * TileSize, y * TileSize);
             bool exposed = y == 0 || _tiles[x, y - 1] == 0;
             Texture2D texture = id == 3 ? StoneArt :
@@ -170,6 +180,7 @@ public partial class World : Node2D
             if (id == 1 && exposed && (x * 17 + y * 11) % 6 == 0)
                 DrawTextureRect(FoliageArt,
                     new Rect2(at.X - 4, at.Y - 14, 32, 22), false);
+        }
         }
 
         // Gentle drifting fireflies.
