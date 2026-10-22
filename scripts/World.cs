@@ -11,52 +11,127 @@ namespace Aetheris;
 public partial class World : Node2D
 {
     public const int TileSize = 24;
-    public const int Width = 160;
-    public const int Height = 60;
+    public const int Width = 240;
+    public const int Height = 80;
     private const int Seed = 10421;
     private const int GroundStart = 19;
+    private const float ReachTiles = 6f;
+    private const float TunnelWidth = 0.13f;
+    private const float CavernThreshold = 0.3f;
+    private static readonly RectangleShape2D TileShape = new() { Size = new Vector2(TileSize, TileSize) };
     private readonly byte[,] _tiles = new byte[Width, Height];
     private readonly int[] _surface = new int[Width];
     private readonly Dictionary<Vector2I, StaticBody2D> _colliders = new();
-    private readonly List<int> _trees = new();
+    private readonly List<TreeInstance> _trees = new();
     private readonly FastNoiseLite _caveNoise = new();
+    private readonly FastNoiseLite _cavernNoise = new();
+    private readonly int[] _firstSolid = new int[Width];
+    private readonly TileChunk[,] _chunks = new TileChunk[
+        (Width + TileChunk.Size - 1) / TileChunk.Size, (Height + TileChunk.Size - 1) / TileChunk.Size];
     private Node2D? _player;
 
     public event Action? TilesChanged;
+    public event Action<TreeInstance>? TreeFelled;
+
+    public IReadOnlyList<TreeInstance> Trees => _trees;
+
+    public TreeInstance? TreeAtTile(int x, int y)
+    {
+        foreach (TreeInstance tree in _trees)
+            if (tree.OccupiesTrunk(x, y)) return tree;
+        return null;
+    }
+
+    public void FellTree(TreeInstance tree)
+    {
+        if (tree.Felled) return;
+        tree.Felled = true;
+        TreeFelled?.Invoke(tree);
+    }
 
     public bool IsSolid(int x, int y) => InBounds(new Vector2I(x, y)) && _tiles[x, y] != 0;
+
+    public byte GetTile(int x, int y) => _tiles[x, y];
+
+    public bool IsEnclosed(int x, int y) => y > _firstSolid[x];
 
     public override void _Ready()
     {
         TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
         _player = GetParent().GetNodeOrNull<Node2D>("Player");
         _caveNoise.Seed = Seed;
-        _caveNoise.Frequency = 0.072f;
+        _caveNoise.Frequency = 0.018f;
         _caveNoise.FractalType = FastNoiseLite.FractalTypeEnum.Fbm;
-        _caveNoise.FractalOctaves = 3;
+        _caveNoise.FractalOctaves = 2;
+        _cavernNoise.Seed = Seed + 1;
+        _cavernNoise.Frequency = 0.03f;
+        _cavernNoise.FractalType = FastNoiseLite.FractalTypeEnum.Fbm;
+        _cavernNoise.FractalOctaves = 2;
         Generate();
+        for (int x = 0; x < Width; x++) _firstSolid[x] = FindFirstSolid(x);
         BuildColliders();
+        BuildChunks();
+        var atmosphere = new TreeAtmosphere { Name = "TreeAtmosphere" };
+        atmosphere.Setup(this, _trees);
+        AddChild(atmosphere);
         QueueRedraw();
+    }
+
+    private int FindFirstSolid(int x)
+    {
+        int y = 0;
+        while (y < Height && _tiles[x, y] == 0) y++;
+        return y;
+    }
+
+    private void BuildChunks()
+    {
+        for (int cx = 0; cx < _chunks.GetLength(0); cx++)
+        for (int cy = 0; cy < _chunks.GetLength(1); cy++)
+        {
+            var chunk = new TileChunk();
+            chunk.Setup(this, new Vector2I(cx, cy));
+            AddChild(chunk);
+            _chunks[cx, cy] = chunk;
+        }
+    }
+
+    private void RedrawChunkAt(int x, int y)
+    {
+        if (InBounds(new Vector2I(x, y)))
+            _chunks[x / TileChunk.Size, y / TileChunk.Size].QueueRedraw();
     }
 
     private void Generate()
     {
         var rng = new Random(Seed);
         for (int x = 0; x < Width; x++)
+            _surface[x] = GroundStart + (int)Math.Round(
+                4.5 * Math.Sin(x * 0.05) + 2.0 * Math.Sin(x * 0.17));
+
+        for (int x = 0; x < Width; x++)
         {
-            int surface = GroundStart + (int)Math.Round(
-                3.0 * Math.Sin(x * 0.075) + 1.8 * Math.Sin(x * 0.23));
-            _surface[x] = surface;
+            int surface = _surface[x];
             for (int y = surface; y < Height; y++)
             {
                 byte tile = y < surface + 2 ? (byte)1 :
                     y < surface + 9 ? (byte)2 : (byte)3;
-                bool cave = y > surface + 5 &&
-                    Math.Abs(_caveNoise.GetNoise2D(x, y)) > 0.36f;
+                // Winding tunnels plus open caverns, sized for a 3x6 block character.
+                bool cave = y > surface + 9 && y < Height - 3 &&
+                    (Math.Abs(_caveNoise.GetNoise2D(x, y)) < TunnelWidth
+                    || _cavernNoise.GetNoise2D(x, y) > CavernThreshold);
                 _tiles[x, y] = cave ? (byte)0 : tile;
             }
-            if (x > 5 && x < Width - 5 && rng.NextDouble() < 0.12)
-                _trees.Add(x);
+        }
+
+        // Trees stand on a single 1-block trunk column with some room from the previous tree.
+        int lastTree = -100;
+        for (int x = 8; x < Width - 10; x++)
+        {
+            if (x - lastTree < 6) continue;
+            if (rng.NextDouble() > 0.22) continue;
+            _trees.Add(new TreeInstance(_trees.Count, x, _surface[x], 10 + rng.Next(5)));
+            lastTree = x;
         }
     }
 
@@ -72,9 +147,7 @@ public partial class World : Node2D
         var body = new StaticBody2D();
         body.Position = new Vector2((tile.X + 0.5f) * TileSize,
             (tile.Y + 0.5f) * TileSize);
-        body.AddChild(new CollisionShape2D {
-            Shape = new RectangleShape2D { Size = new Vector2(TileSize, TileSize) }
-        });
+        body.AddChild(new CollisionShape2D { Shape = TileShape });
         AddChild(body);
         _colliders[tile] = body;
     }
@@ -84,7 +157,7 @@ public partial class World : Node2D
         if (@event is InputEventMouseButton click && click.Pressed)
         {
             Vector2 mouse = GetGlobalMousePosition();
-            if (_player == null || mouse.DistanceTo(_player.GlobalPosition) > 150f) return;
+            if (_player == null || mouse.DistanceTo(_player.GlobalPosition) > ReachTiles * TileSize) return;
             Vector2I tile = new(Mathf.FloorToInt(mouse.X / TileSize),
                 Mathf.FloorToInt(mouse.Y / TileSize));
             if (!InBounds(tile)) return;
@@ -94,8 +167,7 @@ public partial class World : Node2D
             {
                 var tileRect = new Rect2(tile.X * TileSize, tile.Y * TileSize,
                     TileSize, TileSize);
-                if (tileRect.Intersects(new Rect2(_player.GlobalPosition - new Vector2(9, 15),
-                    new Vector2(18, 30)))) return;
+                if (tileRect.Intersects(new Rect2(_player.GlobalPosition - Player.BodySize / 2f, Player.BodySize))) return;
                 SetTile(tile, 1);
             }
         }
@@ -106,13 +178,22 @@ public partial class World : Node2D
     private static bool InBounds(Vector2I t) =>
         t.X >= 0 && t.X < Width && t.Y >= 0 && t.Y < Height;
 
-    private void SetTile(Vector2I tile, byte value)
+    public void SetTile(Vector2I tile, byte value)
     {
         _tiles[tile.X, tile.Y] = value;
         if (_colliders.Remove(tile, out var old)) old.QueueFree();
         if (value != 0) AddCollision(tile);
+
+        // The tile below depends on this one for its look; cave walls depend on the column's top.
+        int top = FindFirstSolid(tile.X);
+        if (top != _firstSolid[tile.X])
+        {
+            _firstSolid[tile.X] = top;
+            for (int y = 0; y < Height; y += TileChunk.Size) RedrawChunkAt(tile.X, y);
+        }
+        RedrawChunkAt(tile.X, tile.Y);
+        RedrawChunkAt(tile.X, tile.Y + 1);
         TilesChanged?.Invoke();
-        QueueRedraw();
     }
 
     public override void _Process(double delta)
@@ -120,13 +201,6 @@ public partial class World : Node2D
         _time += (float)delta;
         QueueRedraw();
     }
-
-    private static readonly Texture2D GrassArt = GD.Load<Texture2D>("res://assets/tiles/grass_top_32.svg");
-    private static readonly Texture2D DirtArt = GD.Load<Texture2D>("res://assets/tiles/dirt_32.svg");
-    private static readonly Texture2D StoneArt = GD.Load<Texture2D>("res://assets/tiles/stone_32.svg");
-    private static readonly Texture2D PineArt = GD.Load<Texture2D>("res://assets/foliage/pine_64x128.svg");
-    private static readonly Texture2D FoliageArt = GD.Load<Texture2D>("res://assets/foliage/grass_clump_32.svg");
-
 
     private float _time;
 
@@ -142,46 +216,7 @@ public partial class World : Node2D
                 new Color(.73f, .81f, .84f, .032f));
         }
 
-        // Pixel-art pine sprites; trees remain decorative, not collidable.
-        foreach (int tx in _trees)
-        {
-            float x = (tx + .5f) * TileSize;
-            float ground = _surface[tx] * TileSize;
-            float h = 115 + (tx % 7) * 10;
-            float w = 72 + (tx % 3) * 8;
-            float sway = Mathf.Sin(_time * .7f + tx) * 1.4f;
-            DrawTextureRect(PineArt,
-                new Rect2(x - w / 2 + sway, ground - h, w, h), false);
-        }
-
-        // Mineable ground, with stone flecks and animated grass.
-        for (int x = 0; x < Width; x++)
-        {
-        bool underground = false;
-        for (int y = 0; y < Height; y++)
-        {
-            byte id = _tiles[x, y];
-            if (id == 0)
-            {
-                // Enclosed air gets a cave wall instead of the forest backdrop.
-                if (underground)
-                    DrawRect(new Rect2(x * TileSize, y * TileSize, TileSize, TileSize),
-                        new Color(.17f, .13f, .11f));
-                continue;
-            }
-            underground = true;
-            Vector2 at = new(x * TileSize, y * TileSize);
-            bool exposed = y == 0 || _tiles[x, y - 1] == 0;
-            Texture2D texture = id == 3 ? StoneArt :
-                id == 1 && exposed ? GrassArt : DirtArt;
-            DrawTextureRect(texture, new Rect2(at, new Vector2(TileSize, TileSize)),
-                false);
-            // Variation above ground uses small hand-authored pixel-grid foliage.
-            if (id == 1 && exposed && (x * 17 + y * 11) % 6 == 0)
-                DrawTextureRect(FoliageArt,
-                    new Rect2(at.X - 4, at.Y - 14, 32, 22), false);
-        }
-        }
+        // Ground tiles are drawn by TileChunk children so edits redraw only one chunk.
 
         // Gentle drifting fireflies.
         for (int i = 0; i < 24; i++)

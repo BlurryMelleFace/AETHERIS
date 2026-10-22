@@ -35,14 +35,14 @@ public partial class ForestBackdrop : Node2D
     [Export] public float CloudSpeed { get; set; } = 1.2f;
     [Export] public float MistSpeed { get; set; } = 2f;
 
-    private Node2D? _player;
     private float _time;
 
     public override void _Ready()
     {
         ZIndex = -10;
+        // Distant scenery is not lit by the player's torch.
+        LightMask = 2;
         TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
-        _player = GetParent()?.GetNodeOrNull<Node2D>("Player");
         QueueRedraw();
     }
 
@@ -54,8 +54,10 @@ public partial class ForestBackdrop : Node2D
 
     public override void _Draw()
     {
-        float cameraX = Engine.IsEditorHint() ? 400f : (_player?.GlobalPosition.X ?? 400f);
-        float cameraY = Engine.IsEditorHint() ? 400f : (_player?.GlobalPosition.Y ?? 400f);
+        Vector2 cameraCenter = Engine.IsEditorHint() ? new Vector2(400, 400)
+            : ToLocal(GetViewport().GetCanvasTransform().AffineInverse() * (GetViewportRect().Size * 0.5f));
+        float cameraX = cameraCenter.X;
+        float cameraY = cameraCenter.Y;
         float left = cameraX - ViewWidth * .5f;
         float top = cameraY - 660f;
         int step = Mathf.Max(2, PixelStep);
@@ -63,30 +65,34 @@ public partial class ForestBackdrop : Node2D
         // SkyBackdrop draws the sky on its own camera-independent canvas.
         DrawClouds(left, top, cameraX, step);
         DrawRidge(left, cameraX, cameraY, FarMountainParallax,
-            FarMountain, .76f, 94, step);
+            FarMountain, .85f, 94, step);
         DrawRidge(left, cameraX, cameraY, MidMountainParallax,
-            MidMountain, 1.00f, 281, step);
+            MidMountain, 1.1f, 281, step);
         DrawForest(left, cameraX, cameraY, FarForestParallax,
-            FarForest, 420f, 83f, 31f, step);
+            FarForest, 420f, 110f, 40f, step);
         DrawForest(left, cameraX, cameraY, NearForestParallax,
-            NearForest, 500f, 123f, 47f, step);
+            NearForest, 500f, 150f, 58f, step);
         DrawMist(left, cameraY, step);
     }
 
     private void DrawClouds(float left, float top, float cameraX, int step)
     {
         for (int band = 0; band < 3; band++)
-        for (int i = -2; i < 14; i++)
         {
-            float x = left + i * 170f + Mathf.PosMod(_time * CloudSpeed
-                * (1 + band * .3f) - cameraX * .004f, 170f);
-            float y = top + 160f + band * 63f + Hash(i, band) * 31f;
-            Color tint = new Color(Clouds.R, Clouds.G, Clouds.B, .11f + band * .025f);
-            for (int j = 0; j < 6; j++)
+            float offset = cameraX * .004f - _time * CloudSpeed * (1 + band * .3f);
+            int first = Mathf.FloorToInt(offset / 170f) - 1;
+            int count = Mathf.CeilToInt(ViewWidth / 170f) + 3;
+            for (int i = first; i < first + count; i++)
             {
-                int w = 19 + (int)(Hash(i * 19 + j, band) * 36);
-                float yy = y - (j is 2 or 3 ? 12 : 0);
-                DrawRect(new Rect2(x + j * 16, yy, w, 8 + (j % 3) * 4), tint);
+                float x = left + i * 170f - offset;
+                float y = top + 160f + band * 63f + Hash(i, band) * 31f;
+                Color tint = new Color(Clouds.R, Clouds.G, Clouds.B, .11f + band * .025f);
+                for (int j = 0; j < 6; j++)
+                {
+                    int w = 19 + (int)(Hash(i * 19 + j, band) * 36);
+                    float yy = y - (j is 2 or 3 ? 12 : 0);
+                    DrawRect(new Rect2(x + j * 16, yy, w, 8 + (j % 3) * 4), tint);
+                }
             }
         }
     }
@@ -99,10 +105,12 @@ public partial class ForestBackdrop : Node2D
         // 0 means fully anchored to the camera, 1 means world-locked foreground.
         float sampleOffset = cameraX * parallax;
         // Pixel-stepped ridge, varying mountain profiles with reproducible noise.
-        for (int col = -step; col <= ViewWidth + step; col += step)
+        int first = Mathf.FloorToInt(sampleOffset / step) - 1;
+        int count = Mathf.CeilToInt(ViewWidth / step) + 3;
+        for (int column = first; column < first + count; column++)
         {
-            float x = left + col;
-            float sample = col + sampleOffset;
+            float sample = column * step;
+            float x = left + sample - sampleOffset;
             float big = Mathf.Pow(Mathf.Abs(Mathf.Sin(sample * .0022f + salt)), 6f);
             float secondary = Mathf.Pow(Mathf.Abs(Mathf.Sin(sample * .0054f + salt)), 7f);
             float rough = Mathf.Abs(Mathf.Sin(sample * .024f + salt)) * 28f;
@@ -111,10 +119,10 @@ public partial class ForestBackdrop : Node2D
             DrawRect(new Rect2(x, peak, step + 1, ViewHeight), color);
             // Irregular snow line: cap only the upper, colder portions.
             float cap = Mathf.Max(0f, (height - 195f) * .35f
-                + (Hash(col / step, salt) - .5f) * 13f);
+                + (Hash(column, salt) - .5f) * 13f);
             if (cap > 3f)
                 DrawRect(new Rect2(x, peak, step + 1, cap), Snow);
-            if (col % (step * 7) == 0 && cap > 15f)
+            if (column % 7 == 0 && cap > 15f)
                 DrawRect(new Rect2(x, peak + cap + 10, step, 17),
                     color.Darkened(.23f));
         }

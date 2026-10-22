@@ -60,6 +60,59 @@ public partial class SkyBackdrop : Node2D
         DrawStars(size, Mathf.Pow(1f - daylight, 2f) * (1f - twilight * 0.8f));
         DrawCelestialBody(size, phase, false);
         DrawCelestialBody(size, Mathf.PosMod(phase + 0.5f, 1f), true);
+        DrawClouds(size, daylight, twilight);
+        DrawBirds(size, daylight);
+    }
+
+    private void DrawClouds(Vector2 size, float daylight, float twilight)
+    {
+        Vector2 cameraCenter = Engine.IsEditorHint() ? Vector2.Zero
+            : GetViewport().GetCanvasTransform().AffineInverse() * (size * 0.5f);
+        Color shade = new Color("#53647e").Lerp(new Color("#aec6cd"), daylight);
+        Color highlight = new Color("#8293ac").Lerp(new Color("#eef0df"), daylight)
+            .Lerp(new Color("#e9b7a2"), twilight * 0.5f);
+        for (int cloud = 0; cloud < 6; cloud++)
+        {
+            float scale = cloud % 2 == 0 ? 2f : 3f;
+            float span = size.X + 256f;
+            float left = Mathf.PosMod(cloud * span / 6f + _time * (3f + cloud % 3)
+                - cameraCenter.X * (0.008f + cloud % 2 * 0.004f), span) - 128f;
+            float top = size.Y * (0.09f + (cloud * 7 % 5) * 0.047f);
+            Vector2 origin = new(left, top);
+            DrawRect(new Rect2(origin + new Vector2(0, 8) * scale,
+                new Vector2(32, 4) * scale), shade);
+            DrawRect(new Rect2(origin + new Vector2(3, 5) * scale,
+                new Vector2(26, 5) * scale), highlight);
+            DrawRect(new Rect2(origin + new Vector2(8, 2) * scale,
+                new Vector2(10, 5) * scale), highlight);
+            DrawRect(new Rect2(origin + new Vector2(17, 4) * scale,
+                new Vector2(7, 4) * scale), highlight);
+        }
+    }
+
+    private void DrawBirds(Vector2 size, float daylight)
+    {
+        if (daylight < 0.15f) return;
+        const float interval = 38f;
+        int flock = Mathf.FloorToInt(_time / interval);
+        float elapsed = Mathf.PosMod(_time, interval) - 7f;
+        float duration = (size.X + 160f) / 65f;
+        if (elapsed < 0f || elapsed > duration) return;
+
+        bool headingRight = flock % 2 == 0;
+        float lead = elapsed * 65f - 80f;
+        Color tint = new(new Color("#324751"), Mathf.SmoothStep(0.15f, 0.6f, daylight));
+        for (int bird = 0; bird < 3 + flock % 3; bird++)
+        {
+            float horizontal = lead - bird * 17f;
+            float vertical = size.Y * (0.18f + flock % 3 * 0.035f)
+                + Mathf.Abs(bird - 2) * 7f + Mathf.Sin(elapsed * 1.4f + bird) * 3f;
+            Vector2 center = new(headingRight ? horizontal : size.X - horizontal, vertical);
+            float wing = Mathf.Round(Mathf.Sin(elapsed * 7f + bird * 1.7f) * 3f);
+            DrawRect(new Rect2(center, new Vector2(3, 2)), tint);
+            DrawLine(center, center + new Vector2(-4, wing), tint, 2f);
+            DrawLine(center + new Vector2(2, 0), center + new Vector2(6, wing), tint, 2f);
+        }
     }
 
     private void DrawStars(Vector2 size, float visibility)
