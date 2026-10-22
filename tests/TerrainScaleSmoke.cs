@@ -28,8 +28,8 @@ public partial class TerrainScaleSmoke : Node
             // --- Proportions ---
             float widthTiles = Player.BodySize.X / World.TileSize, heightTiles = Player.BodySize.Y / World.TileSize;
             Require(World.TileSize == 24, "Block size must stay unchanged.");
-            Require(widthTiles > 2.5f && widthTiles < 3f, $"Character must be slightly under 3 blocks wide ({widthTiles}).");
-            Require(Mathf.Abs(heightTiles - 6f) < 0.01f, "Character must be 6 blocks tall.");
+            Require(widthTiles > 1.4f && widthTiles < 2f, $"Character must be slightly under 2 blocks wide ({widthTiles}).");
+            Require(Mathf.Abs(heightTiles - 3f) < 0.01f, "Character must be 3 blocks tall.");
             var shape = (RectangleShape2D)_player.GetNode<CollisionShape2D>("CollisionShape2D").Shape;
             Require(shape.Size == Player.BodySize, "Collision must match the character size.");
 
@@ -49,7 +49,7 @@ public partial class TerrainScaleSmoke : Node
                 _world.SetTile(new Vector2I(x, y), (byte)(y >= 30 ? 3 : 0));
             for (int y = 30; y < 45; y++)
             {
-                foreach (int x in new[] { 130, 131, 135, 136, 137 }) _world.SetTile(new Vector2I(x, y), 0);
+                foreach (int x in new[] { 130, 135, 136 }) _world.SetTile(new Vector2I(x, y), 0);
             }
             await RealSeconds(0.3);
             float standY = 30 * World.TileSize - Player.BodySize.Y / 2f;
@@ -110,25 +110,26 @@ public partial class TerrainScaleSmoke : Node
             GD.Print($"PERF jump height {jumpTiles:F2} tiles");
             Require(jumpTiles > 3.4f && jumpTiles < 4.8f, "Jump should clear roughly four blocks.");
 
-            // A 2-block gap cannot be fallen through; a 3-block gap can.
-            Teleport(131 * World.TileSize, standY - 2f);
+            // A 1-block gap cannot be fallen through; a 2-block gap can.
+            Teleport(130.5f * World.TileSize, standY - 2f);
             await RealSeconds(1.5);
-            Require(_player.GlobalPosition.Y < standY + 8f, "A 2-block gap must not let the player through.");
-            Teleport(136.5f * World.TileSize, standY - 2f);
+            Require(_player.GlobalPosition.Y < standY + 8f, "A 1-block gap must not let the player through.");
+            Teleport(136f * World.TileSize, standY - 2f);
             await RealSeconds(2.0);
             Require(_player.GlobalPosition.Y > 44 * World.TileSize - Player.BodySize.Y / 2f - 10f,
-                "A 3-block gap must let the player fall through.");
+                "A 2-block gap must let the player fall through.");
             await Shoot("scale_shaft");
 
-            // Mining a 2-block-wide hole in the ground is still not enough, a 3-block one is.
+            // Mining one block of ground is not enough; two adjacent blocks are.
             Teleport(100.5f * World.TileSize, standY - 2f);
             await RealSeconds(0.4);
-            foreach (int x in new[] { 99, 100 }) _world.SetTile(new Vector2I(x, 30), 0);
+            _world.SetTile(new Vector2I(100, 30), 0);
             await RealSeconds(1.0);
-            Require(_player.GlobalPosition.Y < standY + 8f, "Mining two adjacent blocks must not drop the player.");
+            Require(_player.GlobalPosition.Y < standY + 8f, "Mining a single block must not drop the player.");
             _world.SetTile(new Vector2I(101, 30), 0);
+            Teleport(101f * World.TileSize, standY - 2f);
             await RealSeconds(1.0);
-            Require(_player.GlobalPosition.Y > standY + 12f, "Mining three adjacent blocks must let the player drop in.");
+            Require(_player.GlobalPosition.Y > standY + 12f, "Mining two adjacent blocks must let the player drop in.");
 
             GD.Print("PASS: character scale, collision, step-up, jump, gap widths, trees and caves.");
             GetTree().Quit();
@@ -150,9 +151,8 @@ public partial class TerrainScaleSmoke : Node
 
         foreach (TreeInstance tree in _world.Trees)
         {
-            Require(tree.HeightTiles >= 11 && tree.HeightTiles <= 15, "Trees are 11-15 blocks tall.");
-            Require(_world.IsSolid(tree.TrunkColumn, tree.BaseRow) && _world.IsSolid(tree.TrunkColumn + 1, tree.BaseRow),
-                "A tree trunk must stand on ground.");
+            Require(tree.HeightTiles >= 10 && tree.HeightTiles <= 14, "Trees are 10-14 blocks tall.");
+            Require(_world.IsSolid(tree.TrunkColumn, tree.BaseRow), "A tree trunk must stand on ground.");
             Require(!_world.IsSolid(tree.TrunkColumn, tree.BaseRow - 1), "Trees must not be buried.");
         }
 
@@ -163,10 +163,12 @@ public partial class TerrainScaleSmoke : Node
         int row = art.GetHeight() - 3 * World.TileSize, first = -1, last = -1;
         for (int x = 0; x < art.GetWidth(); x++)
             if (art.GetPixel(x, row).A > 0.5f) { if (first < 0) first = x; last = x; }
-        Require(last - first + 1 == 2 * World.TileSize, $"The trunk must be exactly 2 blocks wide ({last - first + 1}px).");
+        int trunkWidth = last - first + 1;
+        Require(trunkWidth >= 16 && trunkWidth < World.TileSize, $"The trunk must be a little under one block wide ({trunkWidth}px).");
 
         Require(_world.TreeAtTile(sample.TrunkColumn, sample.BaseRow - 1) == sample, "The trunk footprint must be targetable.");
-        Require(_world.TreeAtTile(sample.TrunkColumn + 2, sample.BaseRow - 1) != sample, "Only the 2 trunk columns belong to the tree.");
+        Require(_world.TreeAtTile(sample.TrunkColumn + 1, sample.BaseRow - 1) != sample
+            && _world.TreeAtTile(sample.TrunkColumn - 1, sample.BaseRow - 1) != sample, "The trunk footprint is exactly one block wide.");
         _world.FellTree(sample);
         Require(_world.TreeAtTile(sample.TrunkColumn, sample.BaseRow - 1) == null, "A felled tree has no trunk left.");
         int remaining = 0;
@@ -176,15 +178,15 @@ public partial class TerrainScaleSmoke : Node
 
     private void CheckCaves(bool printMap)
     {
-        // A spot the character fits: a 3x6 block of air below the dirt layer.
+        // A spot the character fits: a 2x3 block of air below the dirt layer.
         int roomy = 0, open = 0;
         for (int y = 30; y < World.Height - 3; y++)
         for (int x = 2; x < World.Width - 5; x++)
         {
             if (!_world.IsSolid(x, y)) open++;
             bool fits = true;
-            for (int dx = 0; dx < 3 && fits; dx++)
-            for (int dy = 0; dy < 6 && fits; dy++)
+            for (int dx = 0; dx < 2 && fits; dx++)
+            for (int dy = 0; dy < 3 && fits; dy++)
                 if (_world.IsSolid(x + dx, y - dy)) fits = false;
             if (fits) roomy++;
         }

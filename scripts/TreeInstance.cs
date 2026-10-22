@@ -5,7 +5,7 @@ namespace Aetheris;
 /// <summary>A background tree. The trunk footprint is tile-aligned so chopping can target it later.</summary>
 public sealed class TreeInstance
 {
-    public const int TrunkTiles = 2;
+    public const int TrunkTiles = 1;
 
     public TreeInstance(int id, int trunkColumn, int baseRow, int heightTiles)
     {
@@ -17,7 +17,7 @@ public sealed class TreeInstance
 
     public int Id { get; }
 
-    /// <summary>Left column of the 2-block-wide trunk.</summary>
+    /// <summary>The column of the 1-block-wide trunk.</summary>
     public int TrunkColumn { get; }
 
     /// <summary>First ground row under the trunk.</summary>

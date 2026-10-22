@@ -5,7 +5,7 @@ uniform float wind_strength = 0.0;
 uniform float tree_phase = 0.0;
 uniform float sun_direction = 0.0;
 uniform float daylight = 1.0;
-uniform float sway_pixels = 9.0;
+uniform float sway_pixels = 7.0;
 varying vec4 tree_color;
 
 void vertex() {

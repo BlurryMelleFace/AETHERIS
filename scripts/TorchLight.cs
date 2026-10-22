@@ -5,7 +5,7 @@ namespace Aetheris;
 /// <summary>Warm flickering point light that follows the held item; strength 0 means no light at all.</summary>
 public partial class TorchLight : Node2D
 {
-    private const float RadiusPixels = 290f;
+    private const float RadiusPixels = 230f;
     private readonly PointLight2D _light = new();
     private readonly FastNoiseLite _noise = new() { Frequency = 1f, NoiseType = FastNoiseLite.NoiseTypeEnum.Simplex };
     private DayNightCycle? _cycle;
@@ -52,7 +52,7 @@ public partial class TorchLight : Node2D
 
         // Torchlight is strongest at night; in daylight it only adds a faint warm tint.
         float daylight = _cycle?.Daylight ?? 1f;
-        _light.Energy = Strength * Flicker * Mathf.Lerp(0.85f, 0.1f, daylight);
+        _light.Energy = Strength * Flicker * Mathf.Lerp(1.0f, 0.1f, daylight);
         _light.TextureScale = RadiusPixels / 128f * (0.96f + 0.08f * Flicker);
         _light.Position = new Vector2(_noise.GetNoise1D(_time * 6f + 9f), _noise.GetNoise1D(_time * 6f + 19f)) * 1.5f;
     }

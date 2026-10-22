@@ -96,19 +96,19 @@ public partial class LightMapSmoke : Node
             windyTree.SavePng($"{outDir}/tree_gust.png");
             probe.QueueFree();
 
-            // Find a cave pocket that fits the 3x6 block character.
+            // Find a cave pocket that fits the 2x3 block character with some headroom.
             Vector2I cave = new(-1, -1);
             for (int y = 40; y < World.Height - 4 && cave.X < 0; y++)
             for (int x = 10; x < World.Width - 10 && cave.X < 0; x++)
             {
                 bool fits = true;
-                for (int dx = 0; dx < 3 && fits; dx++)
-                for (int dy = 0; dy < 8 && fits; dy++)
+                for (int dx = 0; dx < 2 && fits; dx++)
+                for (int dy = 0; dy < 5 && fits; dy++)
                     if (world.IsSolid(x + dx, y - dy)) fits = false;
-                if (fits && world.IsSolid(x + 1, y + 1)) cave = new Vector2I(x, y);
+                if (fits && world.IsSolid(x, y + 1) && world.IsSolid(x + 1, y + 1)) cave = new Vector2I(x, y);
             }
             Require(cave.X >= 0, "Test world must contain a cave the character fits in.");
-            player.GlobalPosition = new Vector2((cave.X + 1.5f) * World.TileSize, cave.Y * World.TileSize - Player.BodySize.Y / 2f - 2f);
+            player.GlobalPosition = new Vector2((cave.X + 1f) * World.TileSize, cave.Y * World.TileSize - Player.BodySize.Y / 2f - 2f);
             player.Velocity = Vector2.Zero;
             player.ResetPhysicsInterpolation();
             for (int i = 0; i < 90; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);

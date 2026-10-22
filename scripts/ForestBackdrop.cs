@@ -65,13 +65,13 @@ public partial class ForestBackdrop : Node2D
         // SkyBackdrop draws the sky on its own camera-independent canvas.
         DrawClouds(left, top, cameraX, step);
         DrawRidge(left, cameraX, cameraY, FarMountainParallax,
-            FarMountain, .95f, 94, step);
+            FarMountain, .85f, 94, step);
         DrawRidge(left, cameraX, cameraY, MidMountainParallax,
-            MidMountain, 1.25f, 281, step);
+            MidMountain, 1.1f, 281, step);
         DrawForest(left, cameraX, cameraY, FarForestParallax,
-            FarForest, 420f, 140f, 50f, step);
+            FarForest, 420f, 110f, 40f, step);
         DrawForest(left, cameraX, cameraY, NearForestParallax,
-            NearForest, 500f, 200f, 76f, step);
+            NearForest, 500f, 150f, 58f, step);
         DrawMist(left, cameraY, step);
     }
 

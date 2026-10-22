@@ -8,15 +8,15 @@ public partial class Player : CharacterBody2D
     private static readonly Color Shirt = Color.FromHtml("#4b6f8c");
     private static readonly Color Pants = Color.FromHtml("#3b3a4c");
 
-    /// <summary>Slightly under 3 blocks wide so it fits a 3-block gap but not a 2-block one.</summary>
-    public const float WidthTiles = 2.6f;
-    public const float HeightTiles = 6f;
+    /// <summary>Under 2 blocks wide so it fits a 2-block gap but not a 1-block one.</summary>
+    public const float WidthTiles = 1.6f;
+    public const float HeightTiles = 3f;
     public static readonly Vector2 BodySize = new(World.TileSize * WidthTiles, World.TileSize * HeightTiles);
 
     /// <summary>Ledges up to this many pixels high are climbed automatically.</summary>
     private const float StepHeight = World.TileSize + 1f;
 
-    [Export] public float WalkSpeed { get; set; } = 300f;
+    [Export] public float WalkSpeed { get; set; } = 240f;
     [Export] public float JumpVelocity { get; set; } = -520f;
     [Export] public float Gravity { get; set; } = 1400f;
 
@@ -31,9 +31,9 @@ public partial class Player : CharacterBody2D
     public float HeldLightFlicker => _torch.Flicker;
 
     /// <summary>Where the held light starts; kept inside the body so it is never inside a wall.</summary>
-    public Vector2 HeldLightOrigin => GlobalPosition + new Vector2(0, -30);
+    public Vector2 HeldLightOrigin => GlobalPosition + new Vector2(0, -12);
 
-    private Vector2 TorchOffset => new(_facing * 50f, -62f);
+    private Vector2 TorchOffset => new(_facing * 26f, -34f);
 
     public override void _Ready()
     {
@@ -94,25 +94,25 @@ public partial class Player : CharacterBody2D
     public override void _Draw()
     {
         float w = BodySize.X, h = BodySize.Y, top = -h / 2f;
-        DrawRect(new Rect2(-w / 2f, top, w, 40f), Skin);
-        DrawRect(new Rect2(-w / 2f, top, w, 14f), Color.FromHtml("#3f463e"));
-        DrawRect(new Rect2(-w / 2f, top + 40f, w, 58f), Shirt);
-        DrawRect(new Rect2(-w / 2f, top + 98f, w, 36f), Pants);
-        DrawRect(new Rect2(-w / 2f, top + 134f, w, 10f), Color.FromHtml("#2a2623"));
-        DrawRect(new Rect2(_facing * 14f - 3f, top + 20f, 6f, 6f), Colors.Black);
+        DrawRect(new Rect2(-w / 2f, top, w, 20f), Skin);
+        DrawRect(new Rect2(-w / 2f, top, w, 7f), Color.FromHtml("#3f463e"));
+        DrawRect(new Rect2(-w / 2f, top + 20f, w, 29f), Shirt);
+        DrawRect(new Rect2(-w / 2f, top + 49f, w, 18f), Pants);
+        DrawRect(new Rect2(-w / 2f, top + 67f, w, 5f), Color.FromHtml("#2a2623"));
+        DrawRect(new Rect2(_facing * 7f - 1.5f, top + 10f, 3f, 3f), Colors.Black);
 
         var held = Equipment.Current;
         if (held == ItemCatalog.Hand) return;
         // Forearm reaching out to the item; icons are drawn at a whole-number scale to stay crisp.
-        DrawRect(new Rect2(_facing > 0 ? 22f : -46f, -30f, 24f, 14f), Shirt);
-        DrawRect(new Rect2(_facing > 0 ? 40f : -52f, -30f, 12f, 14f), Skin);
-        float iconSize = PixelPen.Size * 3f;
-        DrawTextureRect(held.Icon, new Rect2(_facing * 50f - iconSize / 2f, -67f, iconSize, iconSize), false);
+        DrawRect(new Rect2(_facing > 0 ? 11f : -23f, -15f, 12f, 8f), Shirt);
+        DrawRect(new Rect2(_facing > 0 ? 20f : -26f, -15f, 6f, 8f), Skin);
+        float iconSize = PixelPen.Size * 2f;
+        DrawTextureRect(held.Icon, new Rect2(_facing * 26f - iconSize / 2f, -37f, iconSize, iconSize), false);
         if (held.LightStrength > 0f)
         {
             // Flame tongue that dances with the light.
             float lick = Mathf.Sin(_time * 14f) + (HeldLightFlicker - 1f) * 8f;
-            DrawRect(new Rect2(_facing * 50f - 3f + Mathf.Round(lick * 1.5f), -73f - Mathf.Round(Mathf.Abs(lick) * 3f), 6, 6),
+            DrawRect(new Rect2(_facing * 26f - 2f + Mathf.Round(lick), -39f - Mathf.Round(Mathf.Abs(lick) * 2f), 4, 4),
                 new Color("#ffd466"));
         }
     }

@@ -94,7 +94,7 @@ public partial class TreeAtmosphere : Node2D
             if (tree.Felled) continue;
             Vector2 root = tree.Root;
             int ground = tree.BaseRow;
-            float length = 70f + Mathf.Abs(direction) * 170f;
+            float length = 50f + Mathf.Abs(direction) * 120f;
             float wind = WindAt(root.X, _seconds);
             for (int sample = -2; sample <= 12; sample++)
             {

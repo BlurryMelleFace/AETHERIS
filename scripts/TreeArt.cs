@@ -8,7 +8,8 @@ public static class TreeArt
 {
     public const int Cell = 2;
     public const int Embed = 8; // pixels buried under the ground so no gap shows on slopes
-    public const int WidthPixels = 208;
+    public const int WidthPixels = 144;
+    public const int TrunkPixels = 20; // a little under one block; the footprint is a full block
 
     private static readonly Color[] Needles =
     {
@@ -52,12 +53,11 @@ public static class TreeArt
 
     private static void DrawTrunk(Color?[,] cells, TreeInstance tree, int cx, int cellsX, int cellsY)
     {
-        // Two blocks wide: 48px = 24 cells.
-        int half = TreeInstance.TrunkTiles * World.TileSize / Cell / 2;
+        int half = TrunkPixels / Cell / 2;
         int top = cellsY - (HeightPixels(tree) / Cell) * 55 / 100;
         for (int y = top; y < cellsY; y++)
         {
-            int flare = Math.Max(0, y - (cellsY - 9)) / 3;
+            int flare = Math.Max(0, y - (cellsY - 7)) / 3;
             for (int x = cx - half - flare; x < cx + half + flare; x++)
             {
                 if (x < 0 || x >= cellsX) continue;
@@ -80,7 +80,7 @@ public static class TreeArt
         {
             float t = tier / (tiers - 1f);
             int top = 2 + (int)((span - tierHeight) * t);
-            int maxHalf = (int)Mathf.Lerp(9f, 46f, t * 0.75f + t * t * 0.25f);
+            int maxHalf = (int)Mathf.Lerp(7f, 32f, t * 0.75f + t * t * 0.25f);
             for (int row = 0; row < tierHeight; row++)
             {
                 int y = top + row;

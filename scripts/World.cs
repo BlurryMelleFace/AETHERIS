@@ -15,7 +15,7 @@ public partial class World : Node2D
     public const int Height = 80;
     private const int Seed = 10421;
     private const int GroundStart = 19;
-    private const float ReachTiles = 9f;
+    private const float ReachTiles = 6f;
     private const float TunnelWidth = 0.13f;
     private const float CavernThreshold = 0.3f;
     private static readonly RectangleShape2D TileShape = new() { Size = new Vector2(TileSize, TileSize) };
@@ -124,14 +124,13 @@ public partial class World : Node2D
             }
         }
 
-        // Trees need a 2-block trunk on near-level ground and some room from the previous tree.
+        // Trees stand on a single 1-block trunk column with some room from the previous tree.
         int lastTree = -100;
         for (int x = 8; x < Width - 10; x++)
         {
-            if (x - lastTree < 7 || Math.Abs(_surface[x] - _surface[x + 1]) > 1) continue;
+            if (x - lastTree < 6) continue;
             if (rng.NextDouble() > 0.22) continue;
-            int baseRow = Math.Max(_surface[x], _surface[x + 1]);
-            _trees.Add(new TreeInstance(_trees.Count, x, baseRow, 11 + rng.Next(5)));
+            _trees.Add(new TreeInstance(_trees.Count, x, _surface[x], 10 + rng.Next(5)));
             lastTree = x;
         }
     }

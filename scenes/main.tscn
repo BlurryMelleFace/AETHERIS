@@ -9,7 +9,7 @@
 [ext_resource type="Script" uid="uid://dle7vywepmia8" path="res://scripts/RadialWheel.cs" id="7_wheel"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_player"]
-size = Vector2(62.4, 144)
+size = Vector2(38.4, 72)
 
 [node name="Main" type="Node2D"]
 
@@ -36,6 +36,7 @@ script = ExtResource("2_player")
 shape = SubResource("RectangleShape2D_player")
 
 [node name="Camera2D" type="Camera2D" parent="Player"]
+zoom = Vector2(1.3333, 1.3333)
 position_smoothing_enabled = true
 
 [node name="LightMap" type="Node2D" parent="."]
