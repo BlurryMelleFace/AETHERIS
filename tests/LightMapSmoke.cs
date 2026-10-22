@@ -37,6 +37,24 @@ public partial class LightMapSmoke : Node
             Require(light.LightAt(at.X + 12, at.Y) < 0.05f || light.LightAt(at.X - 12, at.Y) < 0.05f,
                 "Tiles 12 away in a cave must be dark.");
             Require(light.LightAt(10, 0) > 0.99f, "Open sky must be lit.");
+
+            // A built shelter must shade its interior but keep outer faces lit.
+            const int left = 40, houseW = 9, houseH = 6;
+            int ground = 0;
+            while (!world.IsSolid(left + houseW / 2, ground)) ground++;
+            for (int x = left; x < left + houseW; x++)
+            for (int y = ground - houseH; y < ground; y++)
+            {
+                bool wall = x == left || x == left + houseW - 1;
+                bool roof = y < ground - houseH + 2;
+                if (wall || roof) world.SetTile(new Vector2I(x, y), 1);
+            }
+            int insideX = left + houseW / 2, insideY = ground - 2;
+            player.GlobalPosition = new Vector2((left - 6) * World.TileSize, (ground - 3) * World.TileSize);
+            for (int i = 0; i < 60; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+            Shoot(outDir, "3_building");
+            GD.Print($"roof top {light.LightAt(insideX, ground - houseH):F2}, inside {light.LightAt(insideX, insideY):F2}, " +
+                $"outer wall {light.LightAt(left, ground - 3):F2}, ground top {light.LightAt(left - 3, ground):F2}");
             GD.Print("PASS: light map smoke test.");
             GetTree().Quit();
         }

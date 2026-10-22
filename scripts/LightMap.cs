@@ -11,7 +11,8 @@ public partial class LightMap : Node2D
 {
     // Per-step light multipliers; solid tiles absorb much more than air.
     [Export(PropertyHint.Range, "0.3,0.95,0.01")] public float AirFalloff { get; set; } = 0.68f;
-    [Export(PropertyHint.Range, "0.1,0.9,0.01")] public float SolidFalloff { get; set; } = 0.5f;
+    [Export(PropertyHint.Range, "0.1,0.9,0.01")] public float SolidFalloff { get; set; } = 0.45f;
+    [Export(PropertyHint.Range, "0.5,1,0.01")] public float SurfaceFalloff { get; set; } = 0.92f;
     [Export(PropertyHint.Range, "0.1,1,0.01")] public float PlayerLight { get; set; } = 1f;
 
     private const int W = World.Width;
@@ -93,7 +94,10 @@ public partial class LightMap : Node2D
             {
                 int nx = at.X + dir.X, ny = at.Y + dir.Y;
                 if (nx < 0 || nx >= W || ny < 0 || ny >= H) continue;
-                float next = current * (_world!.IsSolid(nx, ny) ? SolidFalloff : AirFalloff);
+                bool intoSolid = _world!.IsSolid(nx, ny);
+                bool fromSolid = _world.IsSolid(at.X, at.Y);
+                // Exposed block faces catch air light; light passing through blocks fades fast.
+                float next = current * (fromSolid ? SolidFalloff : intoSolid ? SurfaceFalloff : AirFalloff);
                 if (next < Cutoff || next <= map[nx, ny] + 0.001f) continue;
                 map[nx, ny] = next;
                 _queue.Enqueue(new Vector2I(nx, ny));

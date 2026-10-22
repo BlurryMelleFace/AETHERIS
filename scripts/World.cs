@@ -106,7 +106,7 @@ public partial class World : Node2D
     private static bool InBounds(Vector2I t) =>
         t.X >= 0 && t.X < Width && t.Y >= 0 && t.Y < Height;
 
-    private void SetTile(Vector2I tile, byte value)
+    public void SetTile(Vector2I tile, byte value)
     {
         _tiles[tile.X, tile.Y] = value;
         if (_colliders.Remove(tile, out var old)) old.QueueFree();
