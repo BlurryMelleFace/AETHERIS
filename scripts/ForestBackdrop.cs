@@ -3,34 +3,39 @@ using Godot;
 namespace Aetheris;
 
 /// <summary>
-/// Editable procedural parallax landscape, drawn from independent geometric layers.
-/// Every color is exposed in the Inspector; shared CanvasModulate grades all layers.
-/// No external panorama texture required.
+/// Editable layered pixel-art scenery. No flattened backdrop texture.
+/// The existing CanvasModulate grades the whole world for day/night and seasons.
 /// </summary>
 [Tool]
 public partial class ForestBackdrop : Node2D
 {
     [ExportGroup("Composition")]
-    [Export] public float HorizonY { get; set; } = 400f;
-    [Export] public float BaseWidth { get; set; } = 1600f;
-    [Export] public float BaseHeight { get; set; } = 1000f;
     [Export] public int Seed { get; set; } = 8132;
+    [Export(PropertyHint.Range, "2,12,1")] public int PixelStep { get; set; } = 4;
+    [Export] public float HorizonY { get; set; } = 405f;
+    [Export] public float ViewWidth { get; set; } = 1500f;
+    [Export] public float ViewHeight { get; set; } = 1100f;
 
-    [ExportGroup("Depth / Parallax")]
-    [Export(PropertyHint.Range, "0,0.25,0.01")] public float MountainParallax { get; set; } = 0.035f;
-    [Export(PropertyHint.Range, "0,0.45,0.01")] public float ForestParallax { get; set; } = 0.13f;
-    [Export(PropertyHint.Range, "0,0.65,0.01")] public float NearForestParallax { get; set; } = 0.26f;
+    [ExportGroup("Parallax")]
+    [Export(PropertyHint.Range, "0,0.25,0.005")] public float FarMountainParallax { get; set; } = 0.025f;
+    [Export(PropertyHint.Range, "0,0.35,0.005")] public float MidMountainParallax { get; set; } = 0.07f;
+    [Export(PropertyHint.Range, "0,0.5,0.005")] public float FarForestParallax { get; set; } = 0.15f;
+    [Export(PropertyHint.Range, "0,0.7,0.005")] public float NearForestParallax { get; set; } = 0.28f;
 
-    [ExportGroup("Palette")]
-    [Export] public Color SkyTop { get; set; } = new("#263951");
-    [Export] public Color SkyHorizon { get; set; } = new("#ba8584");
-    [Export] public Color Snow { get; set; } = new("#c0cbd8");
-    [Export] public Color DistantMountain { get; set; } = new("#52617b");
-    [Export] public Color DistantForest { get; set; } = new("#2f4d53");
-    [Export] public Color NearForest { get; set; } = new("#203e3d");
-    [Export] public Color Mist { get; set; } = new(0.68f, 0.73f, 0.78f, 0.14f);
+    [ExportGroup("Colors")]
+    [Export] public Color SkyTop { get; set; } = new("#26354b");
+    [Export] public Color SkyMid { get; set; } = new("#58657f");
+    [Export] public Color SkyHorizon { get; set; } = new("#ae8790");
+    [Export] public Color Clouds { get; set; } = new("#8e8290");
+    [Export] public Color FarMountain { get; set; } = new("#46536d");
+    [Export] public Color MidMountain { get; set; } = new("#59677c");
+    [Export] public Color Snow { get; set; } = new("#bcc7d3");
+    [Export] public Color FarForest { get; set; } = new("#33535a");
+    [Export] public Color NearForest { get; set; } = new("#243f43");
+    [Export] public Color Fog { get; set; } = new(0.76f, 0.83f, 0.85f, 0.12f);
 
-    [ExportGroup("Animation")]
+    [ExportGroup("Motion")]
+    [Export] public float CloudSpeed { get; set; } = 3f;
     [Export] public float MistSpeed { get; set; } = 4f;
 
     private Node2D? _player;
@@ -39,91 +44,155 @@ public partial class ForestBackdrop : Node2D
     public override void _Ready()
     {
         ZIndex = -10;
+        TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
         _player = GetParent()?.GetNodeOrNull<Node2D>("Player");
         QueueRedraw();
     }
 
     public override void _Process(double delta)
     {
-        _time += (float)delta;
+        if (!Engine.IsEditorHint()) _time += (float)delta;
         QueueRedraw();
     }
 
     public override void _Draw()
     {
-        float px = Engine.IsEditorHint() ? 400f : (_player?.GlobalPosition.X ?? 400f);
-        float py = Engine.IsEditorHint() ? 400f : (_player?.GlobalPosition.Y ?? 400f);
-        // World-space anchored viewport coverage, overscanned for camera zoom.
-        float left = px - BaseWidth / 2f;
-        float top = py - 600f;
-        for (int i = 0; i < 28; i++)
-        {
-            float t = i / 27f;
-            DrawRect(new Rect2(left, top + i * BaseHeight / 28f,
-                BaseWidth, BaseHeight / 28f + 2),
-                SkyTop.Lerp(SkyHorizon, t * 0.84f));
-        }
+        float cameraX = Engine.IsEditorHint() ? 400f : (_player?.GlobalPosition.X ?? 400f);
+        float cameraY = Engine.IsEditorHint() ? 400f : (_player?.GlobalPosition.Y ?? 400f);
+        float left = cameraX - ViewWidth * .5f;
+        float top = cameraY - 660f;
+        int step = Mathf.Max(2, PixelStep);
 
-        // Far snow-capped peaks with their own silhouette and cap geometry.
-        for (int i = -4; i < 11; i++)
-        {
-            float center = (i * 280f) + px * (1f - MountainParallax);
-            float peakY = HorizonY - 330f - Hash(i, 5) * 170f + (py - 400f);
-            float footY = HorizonY + 255f + (py - 400f);
-            float halfWidth = 170f + Hash(i, 2) * 75f;
-            DrawColoredPolygon(new Vector2[] {
-                new(center - halfWidth, footY), new(center, peakY),
-                new(center + halfWidth, footY)
-            }, DistantMountain);
-            DrawColoredPolygon(new Vector2[] {
-                new(center - halfWidth * .28f, peakY + (footY - peakY) * .31f),
-                new(center, peakY),
-                new(center + halfWidth * .30f, peakY + (footY - peakY) * .31f),
-                new(center + halfWidth * .08f, peakY + (footY - peakY) * .21f),
-                new(center - halfWidth * .12f, peakY + (footY - peakY) * .25f)
-            }, Snow);
-        }
+        DrawSky(left, top, step);
+        DrawClouds(left, top, cameraX, step);
+        DrawRidge(left, cameraX, cameraY, FarMountainParallax,
+            FarMountain, .76f, 94, step);
+        DrawRidge(left, cameraX, cameraY, MidMountainParallax,
+            MidMountain, 1.00f, 281, step);
+        DrawForest(left, cameraX, cameraY, FarForestParallax,
+            FarForest, 420f, 83f, 31f, step);
+        DrawForest(left, cameraX, cameraY, NearForestParallax,
+            NearForest, 500f, 123f, 47f, step);
+        DrawMist(left, cameraY, step);
+    }
 
-        ForestBand(px, py, DistantForest, ForestParallax, 425f, 85f, 48f);
-        ForestBand(px, py, NearForest, NearForestParallax, 565f, 115f, 64f);
-
-        for (int i = 0; i < 5; i++)
+    private void DrawSky(float left, float top, int step)
+    {
+        const int bands = 54;
+        for (int i = 0; i < bands; i++)
         {
-            float y = py + 30f + i * 34f;
-            float drift = Mathf.Sin(_time * .19f + i) * 13f + _time * MistSpeed % 65f;
-            DrawRect(new Rect2(left - 50 + drift, y, BaseWidth + 100, 28), Mist);
+            float t = i / (float)(bands - 1);
+            Color c = t < .58f
+                ? SkyTop.Lerp(SkyMid, t / .58f)
+                : SkyMid.Lerp(SkyHorizon, (t - .58f) / .42f);
+            float y = top + i * ViewHeight / bands;
+            DrawRect(new Rect2(left, y, ViewWidth, ViewHeight / bands + 2), c);
         }
     }
 
-    private void ForestBand(float px, float py, Color color, float parallax,
-        float baseline, float height, float spacing)
+    private void DrawClouds(float left, float top, float cameraX, int step)
     {
-        float offset = px * (1f - parallax);
-        for (int i = -12; i < 42; i++)
+        for (int band = 0; band < 3; band++)
+        for (int i = -2; i < 14; i++)
         {
-            float x = i * spacing + offset;
-            float ground = py - 400f + baseline
-                + Mathf.Sin(i * .32f) * 38f;
-            float h = height * (.68f + Hash(i, 12) * .65f);
-            float w = 19f + h * .20f;
-            DrawLine(new Vector2(x, ground),new Vector2(x, ground-h),
-                color.Darkened(.26f), 5f);
-            for (int layer = 0; layer < 3; layer++)
+            float x = left + i * 170f + Mathf.PosMod(_time * CloudSpeed
+                * (1 + band * .3f) - cameraX * .025f, 170f);
+            float y = top + 160f + band * 63f + Hash(i, band) * 31f;
+            Color tint = new Color(Clouds.R, Clouds.G, Clouds.B, .11f + band * .025f);
+            for (int j = 0; j < 6; j++)
             {
-                float ly = ground - h + layer * h * .23f;
-                float lw = w * (.55f + layer * .27f);
-                DrawColoredPolygon(new Vector2[] {
-                    new(x, ly - h * .24f),
-                    new(x - lw, ly + h * .25f),
-                    new(x + lw, ly + h * .25f)
-                },color);
+                int w = 19 + (int)(Hash(i * 19 + j, band) * 36);
+                float yy = y - (j is 2 or 3 ? 12 : 0);
+                DrawRect(new Rect2(x + j * 16, yy, w, 8 + (j % 3) * 4), tint);
             }
         }
     }
 
-    private float Hash(int a,int b)
+    private void DrawRidge(float left, float cameraX, float cameraY,
+        float parallax, Color color, float scale, int salt, int step)
     {
-        float value = Mathf.Sin((a * 127.1f + b * 311.7f + Seed * .01f) * .12f)
+        float floor = cameraY - 400f + HorizonY + 195f;
+        float offset = cameraX * (1f - parallax);
+        // Pixel-stepped ridge, varying mountain profiles with reproducible noise.
+        for (int col = -step; col <= ViewWidth + step; col += step)
+        {
+            float x = left + col;
+            float sample = x - offset;
+            float big = Mathf.Pow(Mathf.Abs(Mathf.Sin(sample * .0022f + salt)), 6f);
+            float secondary = Mathf.Pow(Mathf.Abs(Mathf.Sin(sample * .0054f + salt)), 7f);
+            float rough = Mathf.Abs(Mathf.Sin(sample * .024f + salt)) * 28f;
+            float height = scale * (120f + big * 250f + secondary * 96f + rough);
+            float peak = floor - height;
+            DrawRect(new Rect2(x, peak, step + 1, ViewHeight), color);
+            // Irregular snow line: cap only the upper, colder portions.
+            float cap = Mathf.Max(0f, (height - 195f) * .35f
+                + (Hash(col / step, salt) - .5f) * 13f);
+            if (cap > 3f)
+                DrawRect(new Rect2(x, peak, step + 1, cap), Snow);
+            if (col % (step * 7) == 0 && cap > 15f)
+                DrawRect(new Rect2(x, peak + cap + 10, step, 17),
+                    color.Darkened(.23f));
+        }
+    }
+
+    private void DrawForest(float left, float cameraX, float cameraY,
+        float parallax, Color baseColor, float baseline, float height,
+        float spacing, int step)
+    {
+        float offset = cameraX * (1f - parallax);
+        int count = Mathf.CeilToInt(ViewWidth / spacing) + 12;
+        int first = Mathf.FloorToInt((left - offset) / spacing) - 4;
+        for (int n = 0; n < count; n++)
+        {
+            int i = first + n;
+            float x = i * spacing + offset;
+            float ground = cameraY - 400f + baseline + Mathf.Sin(i * .34f) * 34f;
+            float h = height * (.67f + Hash(i, 13) * .68f);
+            DrawPine(x, ground, h, baseColor, step, i);
+        }
+    }
+
+    private void DrawPine(float x, float ground, float height,
+        Color baseColor, int step, int id)
+    {
+        float trunkWidth = step * 2f;
+        DrawRect(new Rect2(x - trunkWidth / 2, ground - height * .25f,
+            trunkWidth, height * .25f), baseColor.Darkened(.25f));
+        for (int tier = 0; tier < 4; tier++)
+        {
+            float top = ground - height + tier * height * .205f;
+            int rows = Mathf.Max(3, Mathf.RoundToInt(height * .35f / step));
+            float maxWidth = height * (.18f + tier * .055f);
+            for (int row = 0; row < rows; row++)
+            {
+                float width = maxWidth * row / rows;
+                float y = top + row * step;
+                for (float dx = -width; dx <= width; dx += step)
+                {
+                    if (Hash((int)(dx / step) + id * 7, row + tier * 37) < .10f)
+                        continue;
+                    Color shade = Hash(id + row, (int)dx + tier) > .73f
+                        ? baseColor.Lightened(.16f) : baseColor;
+                    DrawRect(new Rect2(x + dx, y, step, step), shade);
+                }
+            }
+        }
+    }
+
+    private void DrawMist(float left, float cameraY, int step)
+    {
+        for (int i = 0; i < 6; i++)
+        {
+            float y = cameraY - 30f + i * 38f
+                + Mathf.Sin(_time * .18f + i) * 5f;
+            float drift = Mathf.Sin(_time * MistSpeed * .07f + i) * 28f;
+            DrawRect(new Rect2(left - 40 + drift, y, ViewWidth + 80, 19), Fog);
+        }
+    }
+
+    private float Hash(int a, int b)
+    {
+        float value = Mathf.Sin((a * 127.1f + b * 311.7f + Seed * .1f) * .12f)
             * 43758.5453f;
         return Mathf.PosMod(value, 1f);
     }
