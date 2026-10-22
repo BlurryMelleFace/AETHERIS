@@ -8,3 +8,5 @@ Thumbs.db
 *.user
 *.import
 *.uid
+__pycache__/
+*.pyc
