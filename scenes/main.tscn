@@ -1,15 +1,14 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=8 format=3 uid="uid://dbkbcgxs1swic"]
 
-[ext_resource type="Script" path="res://scripts/World.cs" id="1_world"]
-[ext_resource type="Script" path="res://scripts/Player.cs" id="2_player"]
-[ext_resource type="Script" path="res://scripts/DayNightCycle.cs" id="3_cycle"]
-[ext_resource type="Script" path="res://scripts/ForestBackdrop.cs" id="4_backdrop"]
-[ext_resource type="Script" path="res://scripts/SkyBackdrop.cs" id="5_sky"]
-[ext_resource type="Script" path="res://scripts/LightMap.cs" id="6_light"]
+[ext_resource type="Script" uid="uid://dtjijqobpmgm5" path="res://scripts/World.cs" id="1_world"]
+[ext_resource type="Script" uid="uid://q1c10xq88mit" path="res://scripts/Player.cs" id="2_player"]
+[ext_resource type="Script" uid="uid://bepym31s48akq" path="res://scripts/DayNightCycle.cs" id="3_cycle"]
+[ext_resource type="Script" uid="uid://dd44f7hctit66" path="res://scripts/ForestBackdrop.cs" id="4_backdrop"]
+[ext_resource type="Script" uid="uid://dxgyesyl1t7bc" path="res://scripts/SkyBackdrop.cs" id="5_sky"]
+[ext_resource type="Script" uid="uid://vsodjp5d3hh7" path="res://scripts/LightMap.cs" id="6_light"]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_player"]
 radius = 9.0
-height = 30.0
 
 [node name="Main" type="Node2D"]
 
@@ -20,6 +19,8 @@ layer = -1
 script = ExtResource("5_sky")
 
 [node name="ForestBackdrop" type="Node2D" parent="."]
+z_index = -10
+texture_filter = 1
 script = ExtResource("4_backdrop")
 
 [node name="World" type="Node2D" parent="."]
@@ -33,18 +34,14 @@ script = ExtResource("2_player")
 shape = SubResource("CapsuleShape2D_player")
 
 [node name="Camera2D" type="Camera2D" parent="Player"]
-enabled = true
 zoom = Vector2(1.4, 1.4)
 position_smoothing_enabled = true
-position_smoothing_speed = 5.0
 
 [node name="LightMap" type="Node2D" parent="."]
 script = ExtResource("6_light")
 
 [node name="DayNightCycle" type="CanvasModulate" parent="."]
 script = ExtResource("3_cycle")
-DayLengthSeconds = 120.0
-StartPhase = 0.0
 
 [node name="UI" type="CanvasLayer" parent="."]
 
