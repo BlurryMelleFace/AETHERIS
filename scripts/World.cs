@@ -52,6 +52,70 @@ public partial class World : Node2D
 
     public IReadOnlyList<TreeInstance> Trees => _trees;
     public IReadOnlyList<PropInstance> Props => _props;
+    public double Clock => _clock;
+
+    /// <summary>Lets tests aim tools without moving the real OS pointer.</summary>
+    public Vector2? PointerOverride { get; set; }
+
+    private Vector2 Pointer => PointerOverride ?? GetGlobalMousePosition();
+
+    /// <summary>Hits a log or stump takes before it breaks apart.</summary>
+    public const float WoodPropHealth = 3f;
+    private const float PickSeconds = 0.3f;
+
+    /// <summary>True while a prop still has its ground: not removed, standing on a block with open air above.</summary>
+    public bool PropStands(PropInstance prop) =>
+        prop.Alive && IsSolid(prop.Column, prop.BaseRow) && !IsSolid(prop.Column, prop.BaseRow - 1);
+
+    /// <summary>The standing prop under a world point (nearest centre wins) whose kind passes the filter.</summary>
+    public PropInstance? PropAt(Vector2 point, Func<PropArt, bool> accept)
+    {
+        PropInstance? best = null;
+        float bestDistance = float.MaxValue;
+        foreach (PropInstance prop in _props)
+        {
+            if (!accept(prop.Art) || !PropStands(prop)) continue;
+            Vector2 size = prop.Art.Region.Size;
+            var box = new Rect2(prop.CenterX - size.X / 2f - 3f, prop.BaseRow * TileSize + 1f - size.Y - 3f, size.X + 6f, size.Y + 6f);
+            if (!box.HasPoint(point)) continue;
+            float distance = Mathf.Abs(prop.CenterX - point.X);
+            if (distance < bestDistance) { best = prop; bestDistance = distance; }
+        }
+        return best;
+    }
+
+    public static bool IsPickable(PropArt art) => art.Kind is "flower" or "mushroom";
+
+    public static bool IsChoppable(PropArt art) => art.Kind is "log" or "stump";
+
+    /// <summary>Picks a flower or mushroom by hand.</summary>
+    public bool PickProp(PropInstance prop)
+    {
+        if (!prop.Alive || !IsPickable(prop.Art)) return false;
+        prop.Alive = false;
+        Vector2 size = prop.Art.Region.Size;
+        ImpactEffects.Burst(this, new Vector2(prop.CenterX, prop.BaseRow * TileSize - size.Y * 0.5f),
+            ImpactEffects.PlantColors(prop.Art.Name), 8, Vector2.Up, 120f, 60f, 0.5f, 520f, 2f);
+        return true;
+    }
+
+    /// <summary>One axe swing at a log or stump; returns true when it breaks apart.</summary>
+    public bool HitProp(PropInstance prop, float power)
+    {
+        if (!prop.Alive || !IsChoppable(prop.Art)) return false;
+        Vector2 size = prop.Art.Region.Size;
+        Vector2 center = new(prop.CenterX, prop.BaseRow * TileSize - size.Y * 0.5f);
+        prop.Damage += power;
+        prop.HitTime = _clock;
+        if (prop.Damage < WoodPropHealth)
+        {
+            ImpactEffects.Burst(this, center, ImpactEffects.Wood, 4, Vector2.Up, 110f, 85f, 0.4f);
+            return false;
+        }
+        prop.Alive = false;
+        ImpactEffects.Burst(this, center, ImpactEffects.Wood, 14, Vector2.Up, 170f, 100f);
+        return true;
+    }
 
     public TreeInstance? TreeAtTile(int x, int y)
     {
@@ -262,7 +326,7 @@ public partial class World : Node2D
         // Mining and chopping are held-mouse tool actions; right-click places a block.
         if (@event is InputEventMouseButton click && click.Pressed && click.ButtonIndex == MouseButton.Right)
         {
-            Vector2 mouse = GetGlobalMousePosition();
+            Vector2 mouse = Pointer;
             if (_player == null || mouse.DistanceTo(_player.GlobalPosition) > ReachTiles * TileSize) return;
             Vector2I tile = new(Mathf.FloorToInt(mouse.X / TileSize),
                 Mathf.FloorToInt(mouse.Y / TileSize));
@@ -348,11 +412,22 @@ public partial class World : Node2D
         _toolCooldown = Mathf.Max(0f, _toolCooldown - dt);
         if (_player == null) return;
         ItemDefinition tool = _player.Equipment.Current;
-        if (tool.Tool == ToolKind.None || _toolCooldown > 0f || _wheel?.IsOpen == true) return;
+        bool bareHand = tool.Tool == ToolKind.None && tool == ItemCatalog.Hand;
+        if ((tool.Tool == ToolKind.None && !bareHand) || _toolCooldown > 0f || _wheel?.IsOpen == true) return;
         if (!Input.IsMouseButtonPressed(MouseButton.Left)) return;
 
+        Vector2 mouse = Pointer;
+        if (bareHand)
+        {
+            if (mouse.DistanceTo(_player.GlobalPosition) > ReachTiles * TileSize) return;
+            if (PropAt(mouse, IsPickable) is not { } plant) return;
+            _toolCooldown = PickSeconds;
+            _player.Swing(mouse.X, PickSeconds);
+            PickProp(plant);
+            return;
+        }
+
         _toolCooldown = tool.UseSeconds;
-        Vector2 mouse = GetGlobalMousePosition();
         _player.Swing(mouse.X, tool.UseSeconds);
         if (mouse.DistanceTo(_player.GlobalPosition) > ReachTiles * TileSize) return;
         Vector2I tile = new(Mathf.FloorToInt(mouse.X / TileSize), Mathf.FloorToInt(mouse.Y / TileSize));
@@ -365,6 +440,8 @@ public partial class World : Node2D
             _pendingHit = () => HitTile(tile, tool.Power);
         else if (tool.Tool == ToolKind.Axe && TreeAtTile(tile.X, tile.Y) is { } tree)
             _pendingHit = () => HitTree(tree, tile.Y, tool.Power, Math.Sign(tree.Root.X - playerAt.X));
+        else if (tool.Tool == ToolKind.Axe && PropAt(mouse, IsChoppable) is { } wood)
+            _pendingHit = () => HitProp(wood, tool.Power);
     }
 
     private void ForgetOldDamage()

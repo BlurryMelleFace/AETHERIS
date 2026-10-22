@@ -33,6 +33,9 @@ public sealed class PropInstance
     public int BaseRow { get; }
     public float CenterX { get; }
     public int Id { get; }
+    public bool Alive { get; set; } = true;
+    public float Damage { get; set; }
+    public double HitTime { get; set; } = -100.0;
 }
 
 public static class PropCatalog
@@ -96,11 +99,13 @@ public partial class PropLayer : Node2D
         foreach (PropInstance prop in _world.Props)
         {
             if (prop.CenterX < left || prop.CenterX > right) continue;
-            // A prop needs its ground: skip it once the block under it is mined away or covered.
-            if (!_world.IsSolid(prop.Column, prop.BaseRow) || _world.IsSolid(prop.Column, prop.BaseRow - 1)) continue;
+            // A prop needs its ground: skip it once picked, or when the block under it is mined away or covered.
+            if (!_world.PropStands(prop)) continue;
 
             Rect2 region = prop.Art.Region;
-            Vector2 foot = new(prop.CenterX, prop.BaseRow * World.TileSize + 1f);
+            float hitAge = (float)(_world.Clock - prop.HitTime);
+            float shake = hitAge < 0.25f ? Mathf.Sin(hitAge * 70f) * 2f * (1f - hitAge / 0.25f) : 0f;
+            Vector2 foot = new(prop.CenterX + shake, prop.BaseRow * World.TileSize + 1f);
             float lean = prop.Art.Sways ? TreeAtmosphere.WindAt(prop.CenterX, _seconds) * 0.16f
                 + Mathf.Sin((float)_seconds * 1.7f + prop.Id) * 0.025f : 0f;
             // Shear about the foot so the plant bends but never leaves the ground.

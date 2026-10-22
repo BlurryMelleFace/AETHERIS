@@ -53,6 +53,14 @@ public static class ImpactEffects
         _ => new[] { new Color("#4f5478"), new Color("#666c96"), new Color("#2f3247") },
     };
 
+    public static Color[] PlantColors(string name) =>
+        name.Contains("red") ? new[] { new Color("#c8402f"), new Color("#ecdcc0"), new Color("#8f2a24") }
+        : name.Contains("brown") ? new[] { new Color("#9a6a43"), new Color("#d8c3a0"), new Color("#6b4630") }
+        : name.Contains("yellow") ? new[] { new Color("#f1cf48"), new Color("#4a8a3b") }
+        : name.Contains("pink") ? new[] { new Color("#e58aa8"), new Color("#4a8a3b") }
+        : name.Contains("blue") ? new[] { new Color("#6c8fe0"), new Color("#4a8a3b") }
+        : new[] { new Color("#f1eee6"), new Color("#4a8a3b") };
+
     public static readonly Color[] Wood = { new("#8a6248"), new("#69493a"), new("#b88a58") };
 
     public static Color[] LeavesFor(string species) => species switch

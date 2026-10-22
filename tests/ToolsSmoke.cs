@@ -131,7 +131,51 @@ public partial class ToolsSmoke : Node
             await Seconds(1.8);
             await Shoot("tree_felled");
 
-            GD.Print("PASS: pickaxe hardness and cracks, axe chopping, bottom and higher cuts, falling trees, held-mouse tools.");
+            // --- Logs break under the axe; flowers and mushrooms are picked by hand. ---
+            PropInstance Find(Func<PropArt, bool> kind) =>
+                _world.Props.First(p => kind(p.Art) && (p.Column < 93 || p.Column > 147) && p.Column > 8 && p.Column < World.Width - 8 && _world.PropStands(p));
+            Vector2 PropCenter(PropInstance p) => new(p.CenterX, p.BaseRow * World.TileSize - p.Art.Region.Size.Y * 0.5f);
+            void StandBeside(PropInstance p, float dx) => Teleport(p.CenterX + dx, p.BaseRow * World.TileSize - Player.BodySize.Y / 2f - 2f);
+
+            PropInstance log = Find(a => a.Kind == "log");
+            Require(_world.PropAt(PropCenter(log), World.IsChoppable) == log, "A log is found under the pointer.");
+            Require(_world.PropAt(PropCenter(log), World.IsPickable) == null, "A log cannot be picked up by hand.");
+            StandBeside(log, -90f);
+            await Seconds(0.5);
+            _player.Equipment.Equip(ItemCatalog.Axe);
+            await Shoot("log_before");
+            await Press(PropCenter(log), 2.6);
+            Require(!log.Alive && !_world.PropStands(log), "Holding the axe on a log breaks it apart.");
+            await Shoot("log_chopped");
+
+            PropInstance? stump = _world.Props.FirstOrDefault(p => p.Art.Kind == "stump" && _world.PropStands(p));
+            if (stump != null)
+            {
+                for (int i = 0; i < 2; i++) Require(!_world.HitProp(stump, 1f), "A stump takes three swings.");
+                Require(_world.HitProp(stump, 1f) && !stump.Alive, "The third swing breaks the stump.");
+            }
+
+            PropInstance flower = Find(a => a.Kind == "flower");
+            PropInstance mushroom = Find(a => a.Kind == "mushroom");
+            Require(!_world.HitProp(flower, 1f) && flower.Alive, "The axe leaves flowers alone.");
+            _player.Equipment.Equip(ItemCatalog.Pickaxe);
+            StandBeside(flower, -60f);
+            await Seconds(0.4);
+            await Press(PropCenter(flower), 0.6);
+            Require(flower.Alive, "A pickaxe does not pick flowers.");
+            _player.Equipment.Equip(ItemCatalog.Hand);
+            await Shoot("flower_before");
+            await Press(PropCenter(flower), 0.6);
+            Require(!flower.Alive, "An empty hand picks a flower.");
+            StandBeside(mushroom, 60f);
+            await Seconds(0.4);
+            await Press(PropCenter(mushroom), 0.6);
+            Require(!mushroom.Alive, "An empty hand picks a mushroom.");
+            PropInstance farFlower = _world.Props.First(p => p.Art.Kind == "flower" && p.Alive && _world.PropStands(p) && Math.Abs(p.CenterX - _player.GlobalPosition.X) is > 300f and < 560f && (p.Column < 93 || p.Column > 147));
+            await Press(PropCenter(farFlower), 0.6);
+            Require(farFlower.Alive, "Flowers out of reach stay put.");
+
+            GD.Print("PASS: pickaxe hardness and cracks, axe chopping, bottom and higher cuts, falling trees, held-mouse tools, log chopping, hand picking.");
             GetTree().Quit();
         }
         catch (Exception error)
@@ -175,14 +219,14 @@ public partial class ToolsSmoke : Node
     private async Task Press(Vector2 worldPoint, double seconds, bool keepHolding = false)
     {
         Vector2 screen = ScreenOf(worldPoint);
-        // The viewport reads the real pointer, so the test moves it (the window and viewport are the same size here).
-        Input.WarpMouse(screen);
+        _world.PointerOverride = worldPoint;
         Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = true, Position = screen });
         Input.FlushBufferedEvents();
         await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
         await Seconds(seconds);
         Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = false, Position = screen });
         Input.FlushBufferedEvents();
+        _world.PointerOverride = null;
         await Seconds(0.15);
     }
 
