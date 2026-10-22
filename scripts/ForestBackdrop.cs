@@ -17,10 +17,10 @@ public partial class ForestBackdrop : Node2D
     [Export] public float ViewHeight { get; set; } = 1100f;
 
     [ExportGroup("Parallax")]
-    [Export(PropertyHint.Range, "0,0.25,0.005")] public float FarMountainParallax { get; set; } = 0.025f;
-    [Export(PropertyHint.Range, "0,0.35,0.005")] public float MidMountainParallax { get; set; } = 0.07f;
-    [Export(PropertyHint.Range, "0,0.5,0.005")] public float FarForestParallax { get; set; } = 0.15f;
-    [Export(PropertyHint.Range, "0,0.7,0.005")] public float NearForestParallax { get; set; } = 0.28f;
+    [Export(PropertyHint.Range, "0,0.25,0.005")] public float FarMountainParallax { get; set; } = 0.006f;
+    [Export(PropertyHint.Range, "0,0.35,0.005")] public float MidMountainParallax { get; set; } = 0.015f;
+    [Export(PropertyHint.Range, "0,0.5,0.005")] public float FarForestParallax { get; set; } = 0.035f;
+    [Export(PropertyHint.Range, "0,0.7,0.005")] public float NearForestParallax { get; set; } = 0.07f;
 
     [ExportGroup("Colors")]
     [Export] public Color SkyTop { get; set; } = new("#26354b");
@@ -35,8 +35,8 @@ public partial class ForestBackdrop : Node2D
     [Export] public Color Fog { get; set; } = new(0.76f, 0.83f, 0.85f, 0.12f);
 
     [ExportGroup("Motion")]
-    [Export] public float CloudSpeed { get; set; } = 3f;
-    [Export] public float MistSpeed { get; set; } = 4f;
+    [Export] public float CloudSpeed { get; set; } = 1.2f;
+    [Export] public float MistSpeed { get; set; } = 2f;
 
     private Node2D? _player;
     private float _time;
@@ -96,7 +96,7 @@ public partial class ForestBackdrop : Node2D
         for (int i = -2; i < 14; i++)
         {
             float x = left + i * 170f + Mathf.PosMod(_time * CloudSpeed
-                * (1 + band * .3f) - cameraX * .025f, 170f);
+                * (1 + band * .3f) - cameraX * .004f, 170f);
             float y = top + 160f + band * 63f + Hash(i, band) * 31f;
             Color tint = new Color(Clouds.R, Clouds.G, Clouds.B, .11f + band * .025f);
             for (int j = 0; j < 6; j++)
@@ -112,12 +112,14 @@ public partial class ForestBackdrop : Node2D
         float parallax, Color color, float scale, int salt, int step)
     {
         float floor = cameraY - 400f + HorizonY + 195f;
-        float offset = cameraX * (1f - parallax);
+        // Camera-relative sampling: layer displacement equals camera travel * parallax.
+        // 0 means fully anchored to the camera, 1 means world-locked foreground.
+        float sampleOffset = cameraX * parallax;
         // Pixel-stepped ridge, varying mountain profiles with reproducible noise.
         for (int col = -step; col <= ViewWidth + step; col += step)
         {
             float x = left + col;
-            float sample = x - offset;
+            float sample = col + sampleOffset;
             float big = Mathf.Pow(Mathf.Abs(Mathf.Sin(sample * .0022f + salt)), 6f);
             float secondary = Mathf.Pow(Mathf.Abs(Mathf.Sin(sample * .0054f + salt)), 7f);
             float rough = Mathf.Abs(Mathf.Sin(sample * .024f + salt)) * 28f;
@@ -139,13 +141,13 @@ public partial class ForestBackdrop : Node2D
         float parallax, Color baseColor, float baseline, float height,
         float spacing, int step)
     {
-        float offset = cameraX * (1f - parallax);
+        float layerOffset = cameraX * parallax;
         int count = Mathf.CeilToInt(ViewWidth / spacing) + 12;
-        int first = Mathf.FloorToInt((left - offset) / spacing) - 4;
+        int first = Mathf.FloorToInt(layerOffset / spacing) - 4;
         for (int n = 0; n < count; n++)
         {
             int i = first + n;
-            float x = i * spacing + offset;
+            float x = left + (i * spacing - layerOffset);
             float ground = cameraY - 400f + baseline + Mathf.Sin(i * .34f) * 34f;
             float h = height * (.67f + Hash(i, 13) * .68f);
             DrawPine(x, ground, h, baseColor, step, i);
