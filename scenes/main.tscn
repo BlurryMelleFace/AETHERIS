@@ -9,7 +9,7 @@
 [ext_resource type="Script" uid="uid://dle7vywepmia8" path="res://scripts/RadialWheel.cs" id="7_wheel"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_player"]
-size = Vector2(38.4, 72)
+size = Vector2(38.4, 67.2)
 
 [node name="Main" type="Node2D"]
 

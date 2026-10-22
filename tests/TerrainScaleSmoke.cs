@@ -29,13 +29,14 @@ public partial class TerrainScaleSmoke : Node
             float widthTiles = Player.BodySize.X / World.TileSize, heightTiles = Player.BodySize.Y / World.TileSize;
             Require(World.TileSize == 24, "Block size must stay unchanged.");
             Require(widthTiles > 1.4f && widthTiles < 2f, $"Character must be slightly under 2 blocks wide ({widthTiles}).");
-            Require(Mathf.Abs(heightTiles - 3f) < 0.01f, "Character must be 3 blocks tall.");
+            Require(Mathf.Abs(heightTiles - 2.8f) < 0.01f, "Character must be a little under 3 blocks tall.");
             var shape = (RectangleShape2D)_player.GetNode<CollisionShape2D>("CollisionShape2D").Shape;
             Require(shape.Size == Player.BodySize, "Collision must match the character size.");
 
             // --- Natural terrain: spawn, trees, camera framing ---
             await RealSeconds(2.0);
             Require(_player.IsOnFloor(), "Player must land on the generated terrain.");
+            Require(HeroRow() == 0, "A standing player plays the idle animation.");
             await Shoot("scale_surface");
             Vector2 view = GetViewport().GetVisibleRect().Size / _player.GetNode<Camera2D>("Camera2D").Zoom;
             GD.Print($"PERF view {view.X / World.TileSize:F1} x {view.Y / World.TileSize:F1} tiles, character {heightTiles / (view.Y / World.TileSize) * 100:F0}% of screen height");
@@ -59,7 +60,9 @@ public partial class TerrainScaleSmoke : Node
             await RealSeconds(0.3);
             float startX = _player.GlobalPosition.X;
             Hold(Key.D, true);
-            await RealSeconds(1.0);
+            await RealSeconds(0.5);
+            Require(HeroRow() == 2, "A moving player plays the run animation.");
+            await RealSeconds(0.5);
             Hold(Key.D, false);
             float walked = _player.GlobalPosition.X - startX;
             GD.Print($"PERF walked {walked:F0}px in 1s (speed {_player.WalkSpeed})");
@@ -99,13 +102,16 @@ public partial class TerrainScaleSmoke : Node
             await RealSeconds(0.4);
             float peak = _player.GlobalPosition.Y;
             Hold(Key.Space, true);
+            bool sawJumpRow = false;
             ulong end = Time.GetTicksMsec() + 700;
             while (Time.GetTicksMsec() < end)
             {
                 await ToSignal(GetTree(), SceneTree.SignalName.PhysicsFrame);
                 peak = Mathf.Min(peak, _player.GlobalPosition.Y);
+                if (!_player.IsOnFloor() && HeroRow() == 3) sawJumpRow = true;
             }
             Hold(Key.Space, false);
+            Require(sawJumpRow, "A jumping player plays the jump animation.");
             float jumpTiles = (standY - peak) / World.TileSize;
             GD.Print($"PERF jump height {jumpTiles:F2} tiles");
             Require(jumpTiles > 3.4f && jumpTiles < 4.8f, "Jump should clear roughly four blocks.");
@@ -130,6 +136,34 @@ public partial class TerrainScaleSmoke : Node
             Teleport(101f * World.TileSize, standY - 2f);
             await RealSeconds(1.0);
             Require(_player.GlobalPosition.Y > standY + 12f, "Mining two adjacent blocks must let the player drop in.");
+
+            // Headroom: a 3-block-high opening fits the character, a 2-block-high one does not.
+            float walkY = 30 * World.TileSize - Player.BodySize.Y / 2f;
+            for (int x = 105; x < 111; x++) _world.SetTile(new Vector2I(x, 26), 1);
+            Teleport(103 * World.TileSize, walkY - 2f);
+            await RealSeconds(0.4);
+            Hold(Key.D, true);
+            await RealSeconds(1.2);
+            Hold(Key.D, false);
+            Require(_player.GlobalPosition.X > 112 * World.TileSize, "A 3-block-high opening must let the player walk through.");
+            for (int x = 105; x < 111; x++) { _world.SetTile(new Vector2I(x, 26), 0); _world.SetTile(new Vector2I(x, 27), 1); }
+            Teleport(103 * World.TileSize, walkY - 2f);
+            await RealSeconds(0.4);
+            Hold(Key.D, true);
+            await RealSeconds(1.2);
+            Hold(Key.D, false);
+            Require(_player.GlobalPosition.X < 105 * World.TileSize, "A 2-block-high opening must stop the player.");
+            for (int x = 105; x < 111; x++) _world.SetTile(new Vector2I(x, 27), 0);
+
+            // A held torch sits in the hand and its light follows the flame.
+            Teleport(120f * World.TileSize, walkY - 2f);
+            await RealSeconds(0.5);
+            _player.Equipment.Equip(ItemCatalog.Torch);
+            await RealSeconds(0.4);
+            var torchLight = _player.GetNode<TorchLight>("TorchLight");
+            Vector2 flame = _player.Hero.HandPosition + new Vector2(0f, -15f);
+            Require(torchLight.Position.DistanceTo(flame) < 1f, "The torch light must follow the hand.");
+            await Shoot("hero_torch");
 
             GD.Print("PASS: character scale, collision, step-up, jump, gap widths, trees and caves.");
             GetTree().Quit();
@@ -203,6 +237,8 @@ public partial class TerrainScaleSmoke : Node
         }
         Require(roomy > 40, "Caves must be large enough for the character.");
     }
+
+    private int HeroRow() => _player.Hero.CurrentFrame / HeroSprite.Columns;
 
     private void Teleport(float x, float y)
     {

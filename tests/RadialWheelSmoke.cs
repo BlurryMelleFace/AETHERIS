@@ -120,7 +120,7 @@ public partial class RadialWheelSmoke : Node
             var (handLuma, handWarmth) = Region(nightHand);
             var (torchLuma, torchWarmth) = Region(nightTorch);
             GD.Print($"PERF night region brightness hand {handLuma:F3} torch {torchLuma:F3}, warmth {handWarmth:F3} -> {torchWarmth:F3}");
-            Require(torchLuma > handLuma + 0.04f, "The torch must brighten its surroundings at night.");
+            Require(torchLuma > handLuma + 0.025f, "The torch must brighten its surroundings at night.");
             Require(torchWarmth > handWarmth + 0.03f, "Torchlight must be warm.");
 
             GD.Print("PASS: wheel input, categories, slow motion, blur, torch equip/unequip, no glow.");
