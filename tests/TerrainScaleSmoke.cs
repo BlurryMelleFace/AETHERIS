@@ -236,8 +236,8 @@ public partial class TerrainScaleSmoke : Node
     private void CheckProps()
     {
         var sheet = GD.Load<Texture2D>("res://assets/tiles/tile_sheet.png");
-        Require(sheet.GetWidth() == 4 * World.TileSize && sheet.GetHeight() == 10 * World.TileSize,
-            "The tile sheet holds 4 variants of 10 block types at the native 24px size.");
+        Require(sheet.GetWidth() == 4 * World.TileSize && sheet.GetHeight() == 11 * World.TileSize,
+            "The tile sheet holds 4 variants of 11 block types at the native 24px size.");
 
         Require(_world.Props.Count > 60, $"The forest floor needs ground cover ({_world.Props.Count}).");
         var kinds = new HashSet<string>();

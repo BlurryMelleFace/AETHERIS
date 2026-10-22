@@ -11,7 +11,8 @@
    "trunk_px": 20,
    "leaf_start": 0.3,
    "sway": 7.0,
-   "bare_rows": 3
+   "bare_rows": 3,
+   "trunk_rows": 5
   },
   {
    "file": "pine_1.png",
@@ -23,7 +24,8 @@
    "trunk_px": 20,
    "leaf_start": 0.3,
    "sway": 7.0,
-   "bare_rows": 3
+   "bare_rows": 3,
+   "trunk_rows": 5
   },
   {
    "file": "pine_2.png",
@@ -35,7 +37,8 @@
    "trunk_px": 20,
    "leaf_start": 0.3,
    "sway": 7.0,
-   "bare_rows": 4
+   "bare_rows": 4,
+   "trunk_rows": 6
   },
   {
    "file": "pine_3.png",
@@ -47,7 +50,8 @@
    "trunk_px": 20,
    "leaf_start": 0.3,
    "sway": 7.0,
-   "bare_rows": 4
+   "bare_rows": 4,
+   "trunk_rows": 6
   },
   {
    "file": "pine_4.png",
@@ -59,7 +63,8 @@
    "trunk_px": 20,
    "leaf_start": 0.3,
    "sway": 7.0,
-   "bare_rows": 4
+   "bare_rows": 4,
+   "trunk_rows": 7
   },
   {
    "file": "redwood_0.png",
@@ -71,7 +76,8 @@
    "trunk_px": 22,
    "leaf_start": 0.46,
    "sway": 5.0,
-   "bare_rows": 6
+   "bare_rows": 6,
+   "trunk_rows": 9
   },
   {
    "file": "redwood_1.png",
@@ -83,7 +89,8 @@
    "trunk_px": 22,
    "leaf_start": 0.46,
    "sway": 5.0,
-   "bare_rows": 7
+   "bare_rows": 7,
+   "trunk_rows": 10
   },
   {
    "file": "redwood_2.png",
@@ -95,7 +102,8 @@
    "trunk_px": 22,
    "leaf_start": 0.46,
    "sway": 5.0,
-   "bare_rows": 6
+   "bare_rows": 6,
+   "trunk_rows": 9
   },
   {
    "file": "birch_0.png",
@@ -107,7 +115,8 @@
    "trunk_px": 16,
    "leaf_start": 0.38,
    "sway": 8.0,
-   "bare_rows": 4
+   "bare_rows": 4,
+   "trunk_rows": 6
   },
   {
    "file": "birch_1.png",
@@ -119,7 +128,8 @@
    "trunk_px": 16,
    "leaf_start": 0.38,
    "sway": 8.0,
-   "bare_rows": 4
+   "bare_rows": 4,
+   "trunk_rows": 6
   },
   {
    "file": "birch_2.png",
@@ -131,7 +141,8 @@
    "trunk_px": 16,
    "leaf_start": 0.38,
    "sway": 8.0,
-   "bare_rows": 5
+   "bare_rows": 5,
+   "trunk_rows": 7
   },
   {
    "file": "birch_3.png",
@@ -143,7 +154,8 @@
    "trunk_px": 16,
    "leaf_start": 0.38,
    "sway": 8.0,
-   "bare_rows": 5
+   "bare_rows": 5,
+   "trunk_rows": 7
   },
   {
    "file": "oak_0.png",
@@ -155,7 +167,8 @@
    "trunk_px": 22,
    "leaf_start": 0.4,
    "sway": 6.0,
-   "bare_rows": 4
+   "bare_rows": 4,
+   "trunk_rows": 5
   },
   {
    "file": "oak_1.png",
@@ -167,7 +180,8 @@
    "trunk_px": 22,
    "leaf_start": 0.4,
    "sway": 6.0,
-   "bare_rows": 4
+   "bare_rows": 4,
+   "trunk_rows": 6
   },
   {
    "file": "oak_2.png",
@@ -179,7 +193,8 @@
    "trunk_px": 22,
    "leaf_start": 0.4,
    "sway": 6.0,
-   "bare_rows": 4
+   "bare_rows": 4,
+   "trunk_rows": 6
   },
   {
    "file": "oak_autumn_0.png",
@@ -191,7 +206,8 @@
    "trunk_px": 22,
    "leaf_start": 0.4,
    "sway": 6.0,
-   "bare_rows": 4
+   "bare_rows": 4,
+   "trunk_rows": 6
   },
   {
    "file": "oak_autumn_1.png",
@@ -203,7 +219,8 @@
    "trunk_px": 22,
    "leaf_start": 0.4,
    "sway": 6.0,
-   "bare_rows": 4
+   "bare_rows": 4,
+   "trunk_rows": 6
   }
  ]
 }

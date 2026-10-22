@@ -43,7 +43,36 @@ public partial class TreeAtmosphere : Node2D
         {
             if (_visuals.Remove(tree, out var visual)) visual.sprite.QueueFree();
         };
+        _world.TreeCut += OnCut;
+        _world.TreeHit += (tree, _) => _shake[tree] = 0.55f;
         _Process(0);
+    }
+
+    private readonly Dictionary<TreeInstance, float> _shake = new();
+
+    private void OnCut(TreeInstance tree, int remaining, float direction)
+    {
+        if (!_visuals.TryGetValue(tree, out var visual)) return;
+        Texture2D texture = tree.Variant.Texture;
+        float height = texture.GetHeight(), width = texture.GetWidth();
+        float cutLine = height - TreeCatalog.Embed - remaining * World.TileSize;
+        float oldTop = tree.VisibleTopPixels;
+        if (cutLine <= oldTop) return;
+
+        // The part above the cut leaves the tree and falls away.
+        var piece = (ShaderMaterial)visual.material.Duplicate();
+        if (oldTop > 0f) { piece.SetShaderParameter("leaf_start", 1.5f); piece.SetShaderParameter("sway_pixels", 0f); }
+        Vector2 pivot = new(tree.Root.X, tree.Root.Y - remaining * World.TileSize);
+        AddChild(FallingTree.Create(tree.Variant, new Rect2(0f, oldTop, width, cutLine - oldTop), pivot, direction,
+            remaining * World.TileSize, piece));
+
+        // What is left standing is the lower trunk only.
+        tree.VisibleTopPixels = cutLine;
+        visual.sprite.RegionEnabled = true;
+        visual.sprite.RegionRect = new Rect2(0f, cutLine, width, height - cutLine);
+        visual.sprite.Offset = new Vector2(0f, -(height - cutLine) / 2f + TreeCatalog.Embed);
+        visual.material.SetShaderParameter("leaf_start", 1.5f);
+        visual.material.SetShaderParameter("sway_pixels", 0f);
     }
 
     public static float GustAt(float worldX, double seconds)
@@ -79,8 +108,10 @@ public partial class TreeAtmosphere : Node2D
         foreach (var (tree, visual) in _visuals)
         {
             ShaderMaterial material = visual.material;
+            float shake = _shake.GetValueOrDefault(tree);
+            if (shake > 0f) _shake[tree] = Mathf.Max(0f, shake - (float)delta * 1.6f);
             material.SetShaderParameter("wind_time", (float)_seconds);
-            material.SetShaderParameter("wind_strength", WindAt(tree.Root.X, _seconds));
+            material.SetShaderParameter("wind_strength", WindAt(tree.Root.X, _seconds) + shake * 1.6f * Mathf.Sin((float)_seconds * 38f));
             material.SetShaderParameter("sun_direction", sunDirection);
             material.SetShaderParameter("daylight", _cycle?.Daylight ?? 1f);
         }
@@ -95,6 +126,15 @@ public partial class TreeAtmosphere : Node2D
         {
             if (tree.Felled) continue;
             Vector2 root = tree.Root;
+            if (tree.Cut)
+            {
+                // The freshly cut top of the trunk shows pale wood.
+                float cutY = root.Y - tree.Remaining * World.TileSize;
+                float half = tree.Variant.TrunkPixels / 2f;
+                DrawRect(new Rect2(root.X - half, cutY - 1f, half * 2f, 4f), new Color("#d9b27a"));
+                DrawRect(new Rect2(root.X - half, cutY + 2f, half * 2f, 2f), new Color("#8a6248"));
+                continue;
+            }
             int ground = tree.BaseRow;
             float length = 50f + Mathf.Abs(direction) * 120f;
             float wind = WindAt(root.X, _seconds);

@@ -63,8 +63,8 @@ public partial class RadialWheelSmoke : Node
             // --- Aim, scroll categories, equip the torch. ---
             Press(Key.Tab, true);
             await RealSeconds(0.4);
-            Aim(new Vector2(110, 62));
-            Require(_wheel.Category.Id == "tools" && _wheel.Highlighted == ItemCatalog.Torch, "Aiming lower right must highlight the torch.");
+            Aim(new Vector2(110, 0));
+            Require(_wheel.Category.Id == "tools" && _wheel.Highlighted == ItemCatalog.Torch, "Aiming right must highlight the torch.");
             Scroll(MouseButton.WheelDown);
             Require(_wheel.Category.Id == "weapons", "Scrolling down must move to the next category.");
             Scroll(MouseButton.WheelUp);
@@ -72,7 +72,7 @@ public partial class RadialWheelSmoke : Node
             Require(_wheel.Category.Id == "consumables", "Scrolling wraps around the categories.");
             Scroll(MouseButton.WheelDown);
             Require(_wheel.Category.Id == "tools", "Scrolling back returns to tools.");
-            Aim(new Vector2(110, 62));
+            Aim(new Vector2(110, 0));
             await RealSeconds(0.6);
             await Shoot("wheel_open");
             Image openImage = await Capture();

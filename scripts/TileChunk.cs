@@ -10,7 +10,7 @@ public partial class TileChunk : Node2D
     private const int Variants = 4;
 
     // Sheet rows, matching tools/make_tiles.py.
-    private const int Dirt = 0, Grass = 1, Stone = 2, MossStone = 3, OreStone = 4, Deep = 5, CrystalDeep = 6, WallDirt = 7, WallStone = 8, Overlay = 9;
+    private const int Dirt = 0, Grass = 1, Stone = 2, MossStone = 3, OreStone = 4, Deep = 5, CrystalDeep = 6, WallDirt = 7, WallStone = 8, Overlay = 9, Cracks = 10;
 
     private static readonly Texture2D Sheet = GD.Load<Texture2D>("res://assets/tiles/tile_sheet.png");
 
@@ -65,6 +65,9 @@ public partial class TileChunk : Node2D
                 _ => h % 13 == 0 ? CrystalDeep : Deep,
             };
             Blit(row, variant, cell);
+
+            int crack = _world.DamageStage(x, y);
+            if (crack > 0) Blit(Cracks, crack - 1, cell);
 
             // Grass wraps round the corners of a cliff top.
             if (grassTop)

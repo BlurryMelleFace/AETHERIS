@@ -30,10 +30,25 @@ public partial class World : Node2D
     private readonly int[] _firstSolid = new int[Width];
     private readonly TileChunk[,] _chunks = new TileChunk[
         (Width + TileChunk.Size - 1) / TileChunk.Size, (Height + TileChunk.Size - 1) / TileChunk.Size];
-    private Node2D? _player;
+    private Player? _player;
+    private RadialWheel? _wheel;
+    private readonly Dictionary<Vector2I, (float damage, double time)> _damage = new();
+    private double _clock;
+    private float _toolCooldown;
+    private float _pendingTimer = -1f;
+    private Action? _pendingHit;
+
+    /// <summary>Hits a tree trunk block takes before it is cut through.</summary>
+    public const float TreeBlockHealth = 4f;
+    private const float DamageMemorySeconds = 1.6f;
 
     public event Action? TilesChanged;
     public event Action<TreeInstance>? TreeFelled;
+
+    /// <summary>A tree was cut: the tree, how many trunk blocks remain standing, and the direction the top falls (-1 or 1).</summary>
+    public event Action<TreeInstance, int, float>? TreeCut;
+
+    public event Action<TreeInstance, int>? TreeHit;
 
     public IReadOnlyList<TreeInstance> Trees => _trees;
     public IReadOnlyList<PropInstance> Props => _props;
@@ -63,7 +78,8 @@ public partial class World : Node2D
     public override void _Ready()
     {
         TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
-        _player = GetParent().GetNodeOrNull<Node2D>("Player");
+        _player = GetParent().GetNodeOrNull<Player>("Player");
+        _wheel = GetParent().GetNodeOrNull<RadialWheel>("RadialWheel");
         _caveNoise.Seed = Seed;
         _caveNoise.Frequency = 0.018f;
         _caveNoise.FractalType = FastNoiseLite.FractalTypeEnum.Fbm;
@@ -243,25 +259,125 @@ public partial class World : Node2D
 
     public override void _UnhandledInput(InputEvent @event)
     {
-        if (@event is InputEventMouseButton click && click.Pressed)
+        // Mining and chopping are held-mouse tool actions; right-click places a block.
+        if (@event is InputEventMouseButton click && click.Pressed && click.ButtonIndex == MouseButton.Right)
         {
             Vector2 mouse = GetGlobalMousePosition();
             if (_player == null || mouse.DistanceTo(_player.GlobalPosition) > ReachTiles * TileSize) return;
             Vector2I tile = new(Mathf.FloorToInt(mouse.X / TileSize),
                 Mathf.FloorToInt(mouse.Y / TileSize));
-            if (!InBounds(tile)) return;
-            if (click.ButtonIndex == MouseButton.Left && _tiles[tile.X, tile.Y] != 0)
-                SetTile(tile, 0);
-            else if (click.ButtonIndex == MouseButton.Right && _tiles[tile.X, tile.Y] == 0)
-            {
-                var tileRect = new Rect2(tile.X * TileSize, tile.Y * TileSize,
-                    TileSize, TileSize);
-                if (tileRect.Intersects(new Rect2(_player.GlobalPosition - Player.BodySize / 2f, Player.BodySize))) return;
-                SetTile(tile, 1);
-            }
+            if (!InBounds(tile) || _tiles[tile.X, tile.Y] != 0) return;
+            var tileRect = new Rect2(tile.X * TileSize, tile.Y * TileSize, TileSize, TileSize);
+            if (tileRect.Intersects(new Rect2(_player.GlobalPosition - Player.BodySize / 2f, Player.BodySize))) return;
+            SetTile(tile, 1);
         }
         if (@event is InputEventKey key && key.Pressed && !key.Echo && key.Keycode == Key.R)
             GetTree().ReloadCurrentScene();
+    }
+
+    public static float Hardness(byte tile) => tile switch { 3 => 3f, 4 => 5f, _ => 1f };
+
+    /// <summary>0 for an untouched block, then 1-3 as cracks spread across a block being mined.</summary>
+    public int DamageStage(int x, int y)
+    {
+        if (!_damage.TryGetValue(new Vector2I(x, y), out var entry)) return 0;
+        float ratio = entry.damage / Hardness(_tiles[x, y]);
+        return ratio <= 0f ? 0 : Mathf.Clamp(Mathf.CeilToInt(ratio * 3f), 1, 3);
+    }
+
+    /// <summary>Applies one pickaxe swing to a block; returns true when the block breaks.</summary>
+    public bool HitTile(Vector2I tile, float power)
+    {
+        if (!InBounds(tile) || _tiles[tile.X, tile.Y] == 0) return false;
+        byte id = _tiles[tile.X, tile.Y];
+        float total = (_damage.TryGetValue(tile, out var entry) ? entry.damage : 0f) + power;
+        Vector2 center = new((tile.X + 0.5f) * TileSize, (tile.Y + 0.5f) * TileSize);
+        if (total >= Hardness(id))
+        {
+            ImpactEffects.Burst(this, center, ImpactEffects.ChipsFor(id), 10, Vector2.Up, 150f);
+            SetTile(tile, 0);
+            return true;
+        }
+        _damage[tile] = (total, _clock);
+        ImpactEffects.Burst(this, center, ImpactEffects.ChipsFor(id), 4, Vector2.Up, 110f, 85f, 0.4f);
+        RedrawAround(tile.X, tile.Y);
+        return false;
+    }
+
+    /// <summary>Applies one axe swing to the trunk block at a row. Cutting the bottom block fells the whole tree
+    /// (leaving a stump); cutting higher up fells only the part above the cut.</summary>
+    public bool HitTree(TreeInstance tree, int row, float power, float fallDirection)
+    {
+        int block = tree.BlockIndex(row);
+        if (!tree.OccupiesTrunk(tree.TrunkColumn, row)) return false;
+        Vector2 center = new((tree.TrunkColumn + 0.5f) * TileSize, (row + 0.5f) * TileSize);
+        float total = tree.AddDamage(block, power);
+        if (total < TreeBlockHealth)
+        {
+            ImpactEffects.Burst(this, center, ImpactEffects.Wood, 4, new Vector2(-fallDirection, -0.4f), 110f, 70f, 0.4f);
+            TreeHit?.Invoke(tree, block);
+            return false;
+        }
+        ImpactEffects.Burst(this, center, ImpactEffects.Wood, 12, new Vector2(-fallDirection, -0.5f), 160f);
+        if (tree.IsStump && block == 0)
+        {
+            FellTree(tree);
+            return true;
+        }
+        // Bottom block: everything above it falls and a one-block stump stays; otherwise the cut block and all above fall.
+        int remaining = Math.Max(block, 1);
+        float direction = fallDirection == 0f ? 1f : fallDirection;
+        tree.CutTo(remaining);
+        TreeCut?.Invoke(tree, remaining, direction);
+        return true;
+    }
+
+    private void UpdateTools(float dt)
+    {
+        if (_pendingHit != null)
+        {
+            _pendingTimer -= dt;
+            if (_pendingTimer <= 0f)
+            {
+                var hit = _pendingHit;
+                _pendingHit = null;
+                hit();
+            }
+        }
+
+        _toolCooldown = Mathf.Max(0f, _toolCooldown - dt);
+        if (_player == null) return;
+        ItemDefinition tool = _player.Equipment.Current;
+        if (tool.Tool == ToolKind.None || _toolCooldown > 0f || _wheel?.IsOpen == true) return;
+        if (!Input.IsMouseButtonPressed(MouseButton.Left)) return;
+
+        _toolCooldown = tool.UseSeconds;
+        Vector2 mouse = GetGlobalMousePosition();
+        _player.Swing(mouse.X, tool.UseSeconds);
+        if (mouse.DistanceTo(_player.GlobalPosition) > ReachTiles * TileSize) return;
+        Vector2I tile = new(Mathf.FloorToInt(mouse.X / TileSize), Mathf.FloorToInt(mouse.Y / TileSize));
+        if (!InBounds(tile)) return;
+
+        // The blow lands partway through the swing, as the tool comes down.
+        _pendingTimer = tool.UseSeconds * 0.5f;
+        Vector2 playerAt = _player.GlobalPosition;
+        if (tool.Tool == ToolKind.Pickaxe)
+            _pendingHit = () => HitTile(tile, tool.Power);
+        else if (tool.Tool == ToolKind.Axe && TreeAtTile(tile.X, tile.Y) is { } tree)
+            _pendingHit = () => HitTree(tree, tile.Y, tool.Power, Math.Sign(tree.Root.X - playerAt.X));
+    }
+
+    private void ForgetOldDamage()
+    {
+        List<Vector2I>? stale = null;
+        foreach (var (tile, entry) in _damage)
+            if (_clock - entry.time > DamageMemorySeconds) (stale ??= new()).Add(tile);
+        if (stale == null) return;
+        foreach (Vector2I tile in stale)
+        {
+            _damage.Remove(tile);
+            RedrawAround(tile.X, tile.Y);
+        }
     }
 
     private static bool InBounds(Vector2I t) =>
@@ -270,6 +386,7 @@ public partial class World : Node2D
     public void SetTile(Vector2I tile, byte value)
     {
         _tiles[tile.X, tile.Y] = value;
+        _damage.Remove(tile);
         if (_colliders.Remove(tile, out var old)) old.QueueFree();
         if (value != 0) AddCollision(tile);
 
@@ -287,6 +404,9 @@ public partial class World : Node2D
     public override void _Process(double delta)
     {
         _time += (float)delta;
+        _clock += delta;
+        UpdateTools((float)delta);
+        ForgetOldDamage();
         QueueRedraw();
     }
 

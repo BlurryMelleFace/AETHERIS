@@ -19,6 +19,9 @@ public sealed class TreeVariant
 
     public float Sway { get; init; }
     public int BareRows { get; init; }
+
+    /// <summary>Trunk blocks, counted from the ground, that can be chopped.</summary>
+    public int TrunkRows { get; init; }
     public Texture2D Texture => TreeCatalog.TextureOf(this);
 }
 
@@ -53,6 +56,7 @@ public static class TreeCatalog
                 LeafStart = entry["leaf_start"].AsSingle(),
                 Sway = entry["sway"].AsSingle(),
                 BareRows = entry["bare_rows"].AsInt32(),
+                TrunkRows = entry["trunk_rows"].AsInt32(),
             });
         }
         return list;

@@ -31,6 +31,8 @@ public partial class Player : CharacterBody2D
     private float _airTime;
     private float _fallSpeed;
     private float _landTimer;
+    private float _swing;
+    private float _swingDuration = 0.3f;
     private bool _wasOnFloor = true;
 
     public Equipment Equipment { get; } = new();
@@ -108,9 +110,18 @@ public partial class Player : CharacterBody2D
     {
         float dt = (float)delta;
         _time += dt;
+        _swing = Mathf.Max(0f, _swing - dt);
         Animate(dt);
         _torch.Position = FlamePosition;
         if (Holding) QueueRedraw();
+    }
+
+    /// <summary>Turns toward the target and swings the held tool once.</summary>
+    public void Swing(float targetX, float seconds)
+    {
+        if (Mathf.Abs(targetX - GlobalPosition.X) > 2f) _facing = targetX > GlobalPosition.X ? 1f : -1f;
+        _swingDuration = Mathf.Max(0.1f, seconds * 0.95f);
+        _swing = _swingDuration;
     }
 
     private void Animate(float dt)
@@ -164,12 +175,22 @@ public partial class Player : CharacterBody2D
     {
         var held = Equipment.Current;
         if (!Holding) return;
-        // Drawn under the hero so the fingers wrap the handle; the icon pixels match the hero's pixel size.
+        // Drawn under the hero so the fingers wrap the handle; the icon is scaled by a whole number to stay crisp.
         Vector2 hand = _hero.HandPosition;
         float size = PixelPen.Size * IconScale;
-        Vector2 grip = new Vector2(8f, 11.5f) * IconScale;
-        var origin = new Vector2(_facing > 0f ? hand.X - grip.X : hand.X + grip.X, hand.Y - grip.Y);
-        DrawTextureRect(held.Icon, new Rect2(origin, new Vector2(_facing > 0f ? size : -size, size)), false);
+        Vector2 grip = held.Grip * IconScale;
+
+        // Tools rest tilted back and swing forward in an arc; other items stay upright.
+        float angle = held.Tool == ToolKind.None ? 0f : -0.4f;
+        if (_swing > 0f)
+        {
+            float p = 1f - _swing / _swingDuration;
+            float eased = p < 0.35f ? Mathf.Lerp(-0.4f, -1.25f, p / 0.35f) : Mathf.Lerp(-1.25f, 1.2f, Mathf.SmoothStep(0f, 1f, (p - 0.35f) / 0.65f));
+            angle = eased;
+        }
+        DrawSetTransform(hand, angle * _facing, new Vector2(_facing, 1f));
+        DrawTextureRect(held.Icon, new Rect2(-grip, new Vector2(size, size)), false);
+        DrawSetTransform(Vector2.Zero, 0f, Vector2.One);
         if (held.LightStrength > 0f)
         {
             // Flame tongue that dances with the light.

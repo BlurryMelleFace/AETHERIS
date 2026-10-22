@@ -15,8 +15,17 @@ public static class ItemCatalog
         LightColor = new Color(1f, 0.68f, 0.36f)
     };
 
-    private static readonly ItemDefinition Pickaxe = new("pickaxe", "Pickaxe",
-        "Coming soon.", PaintPickaxe) { Available = false };
+    public static readonly ItemDefinition Pickaxe = new("pickaxe", "Pickaxe",
+        "Hold the mouse to mine blocks.", PaintPickaxe)
+    {
+        Tool = ToolKind.Pickaxe, UseSeconds = 0.26f, Grip = new Vector2(8f, 12.5f)
+    };
+
+    public static readonly ItemDefinition Axe = new("axe", "Axe",
+        "Chop trees. Cut low and the whole tree falls.", PaintAxe)
+    {
+        Tool = ToolKind.Axe, UseSeconds = 0.36f, Grip = new Vector2(8f, 12.5f)
+    };
     private static readonly ItemDefinition Sword = new("sword", "Sword",
         "Coming soon.", PaintSword) { Available = false };
     private static readonly ItemDefinition Bow = new("bow", "Bow",
@@ -29,7 +38,7 @@ public static class ItemCatalog
     /// <summary>Wheel categories in scroll order; every category starts with the empty hand.</summary>
     public static readonly IReadOnlyList<ItemCategory> Categories = new[]
     {
-        new ItemCategory("tools", "Tools", new[] { Hand, Torch, Pickaxe }),
+        new ItemCategory("tools", "Tools", new[] { Hand, Torch, Pickaxe, Axe }),
         new ItemCategory("weapons", "Weapons", new[] { Hand, Sword, Bow }),
         new ItemCategory("consumables", "Consumables", new[] { Hand, Potion, Bread }),
     };
@@ -54,9 +63,22 @@ public static class ItemCatalog
 
     private static void PaintPickaxe(PixelPen p)
     {
-        p.Rect(7, 4, 2, 11, "#8a5a36");
-        p.Rect(4, 3, 8, 2, "#aeb7c2"); p.Rect(2, 5, 3, 2, "#aeb7c2");
-        p.Rect(11, 5, 3, 2, "#aeb7c2"); p.Rect(4, 4, 8, 1, "#d7dde4");
+        // wooden haft with a bound neck, and a curved iron head
+        p.Rect(7, 4, 2, 11, "#8a5a36"); p.Rect(8, 4, 1, 11, "#5f3b24");
+        p.Rect(6, 5, 4, 1, "#6b4a2f");
+        p.Rect(4, 3, 8, 2, "#aeb7c2"); p.Rect(2, 4, 3, 2, "#aeb7c2"); p.Rect(1, 6, 2, 1, "#aeb7c2");
+        p.Rect(11, 4, 3, 2, "#aeb7c2"); p.Rect(13, 6, 2, 1, "#aeb7c2");
+        p.Rect(4, 3, 8, 1, "#e3e8ee"); p.Rect(2, 5, 3, 1, "#7b8794"); p.Rect(11, 5, 3, 1, "#7b8794");
+    }
+
+    private static void PaintAxe(PixelPen p)
+    {
+        // long haft, a steel blade with a bright cutting edge and a small poll behind it
+        p.Rect(7, 3, 2, 12, "#8a5a36"); p.Rect(8, 3, 1, 12, "#5f3b24");
+        p.Rect(9, 3, 3, 6, "#aeb7c2"); p.Rect(12, 2, 2, 8, "#d7dde4");
+        p.Rect(10, 8, 2, 1, "#7b8794"); p.Rect(9, 3, 3, 1, "#e3e8ee");
+        p.Rect(5, 4, 2, 3, "#7b8794"); p.Rect(5, 4, 2, 1, "#aeb7c2");
+        p.Rect(7, 9, 2, 1, "#6b4a2f");
     }
 
     private static void PaintSword(PixelPen p)

@@ -3,7 +3,8 @@
 Sheet: 4 variants per row, 24px per tile. Rows:
  0 dirt, 1 grass-topped dirt, 2 stone, 3 mossy stone, 4 ore-flecked stone,
  5 deep stone, 6 deep stone with crystals, 7 dirt cave wall, 8 stone cave wall,
- 9 overlays (grass wrapping the left side, grass wrapping the right side).
+ 9 overlays (grass wrapping the left side, grass wrapping the right side),
+ 10 mining cracks (three growing stages, drawn over a block being mined).
 
 Run:  python tools/make_tiles.py
 """
@@ -15,7 +16,7 @@ from art_common import (ellipse_mask, palette, quantize, shift, to_image, value_
 
 S = 24
 VARIANTS = 4
-ROWS = 10
+ROWS = 11
 
 DIRT = palette("#3f2c20", "#5a3f2c", "#6e4d34", "#85603f")
 GRASS = palette("#264d27", "#356b32", "#4a8a3b", "#68a847", "#8ec35e")
@@ -210,6 +211,33 @@ def make_wall(seed, colors, crack=None):
     return rgb
 
 
+def crack_stages():
+    """Three transparent overlays: a few fine cracks, a spreading web, and a nearly shattered block."""
+    rng = np.random.default_rng(77)
+    stages = []
+    paths = []
+    for _ in range(6):
+        x, y = float(rng.integers(8, 16)), float(rng.integers(8, 16))
+        angle = rng.uniform(0, 6.283)
+        path = []
+        for _ in range(int(rng.integers(7, 12))):
+            path.append((int(round(x)), int(round(y))))
+            angle += rng.uniform(-0.7, 0.7)
+            x += np.cos(angle) * 1.4
+            y += np.sin(angle) * 1.4
+        paths.append(path)
+    for stage, count in enumerate((2, 4, 6)):
+        layer = np.zeros((S, S, 4), dtype=np.uint8)
+        for path in paths[:count]:
+            for x, y in path[: 5 + stage * 3]:
+                if 0 <= x < S and 0 <= y < S:
+                    layer[y, x] = (18, 12, 14, 210)
+                    if 0 <= x + 1 < S and stage > 0:
+                        layer[y, x + 1] = (18, 12, 14, 120)
+        stages.append(layer)
+    return stages
+
+
 def build():
     sheet = np.zeros((S * ROWS, S * VARIANTS, 4), dtype=np.uint8)
 
@@ -233,6 +261,8 @@ def build():
     left, right = grass_edges()
     sheet[9 * S:10 * S, 0:S] = left
     sheet[9 * S:10 * S, S:2 * S] = right
+    for stage, layer in enumerate(crack_stages()):
+        sheet[10 * S:11 * S, stage * S:(stage + 1) * S] = layer
     return sheet
 
 

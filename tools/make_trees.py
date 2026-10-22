@@ -330,7 +330,8 @@ def build(out_dir):
             canvas.image().save(os.path.join(out_dir, file))
             entries.append(dict(file=file, species=name, width=canvas.w, height=canvas.h, height_tiles=ht,
                                 weight=weight / len(heights), trunk_px=trunk_px, leaf_start=leaf_start, sway=sway,
-                                bare_rows=int(round(ht * leaf_start))))
+                                bare_rows=int(round(ht * leaf_start)),
+                                trunk_rows=min(ht - 2, int(round(ht * (leaf_start + 0.18))))))
             previews.append(canvas.image())
     with open(os.path.join(out_dir, "trees.json"), "w") as handle:
         json.dump(dict(embed=EMBED, trees=entries), handle, indent=1)
