@@ -122,49 +122,29 @@ public partial class World : Node2D
     private static readonly Texture2D PineArt = GD.Load<Texture2D>("res://assets/foliage/pine_64x128.svg");
     private static readonly Texture2D FoliageArt = GD.Load<Texture2D>("res://assets/foliage/grass_clump_32.svg");
 
+    private static readonly Texture2D SnowyBackdrop =
+        GD.Load<Texture2D>("res://assets/backgrounds/moody_snowy_forest_96.png");
+
     private float _time;
 
     public override void _Draw()
     {
         float worldWidth = Width * TileSize;
-        // Atmospheric sky gradient.
-        for (int i = 0; i < 24; i++)
-        {
-            float t = i / 23f;
-            DrawRect(new Rect2(0, i * 55, worldWidth, 57),
-                new Color(Mathf.Lerp(.12f, .40f, t), Mathf.Lerp(.19f, .56f, t),
-                    Mathf.Lerp(.30f, .63f, t), 1));
-        }
-        // Sun glow (drawn as nested, gently translucent circles).
-        Vector2 sun = new(worldWidth * .76f, 155);
-        for (int i = 7; i >= 0; i--)
-            DrawCircle(sun, 28 + i * 13, new Color(1f, .78f, .46f, .017f));
-        DrawCircle(sun, 26, new Color(1f, .87f, .63f, .84f));
-
-        // Rolling background ridges and distant evergreen canopy.
-        for (int x = 0; x < worldWidth; x += 8)
-        {
-            float far = 265 + 38 * Mathf.Sin(x * .0014f) + 13 * Mathf.Sin(x * .0042f);
-            float near = 345 + 31 * Mathf.Sin(x * .0022f) + 17 * Mathf.Sin(x * .006f);
-            DrawRect(new Rect2(x, far, 8, 1200), Color.FromHtml("#71878a"));
-            DrawRect(new Rect2(x, near, 8, 1200), Color.FromHtml("#4e7274"));
-        }
-
-        for (int x = 12; x < worldWidth; x += 29)
-        {
-            float y = 374 + 19 * Mathf.Sin(x * .007f);
-            float h = 35 + (x % 5) * 5;
-            DrawLine(new Vector2(x, y), new Vector2(x, y - h), Color.FromHtml("#314d50"), 3);
-            DrawColoredPolygon(new Vector2[] {
-                new(x, y-h-15), new(x-16, y-6), new(x+16, y-6)
-            }, Color.FromHtml("#34575a"));
-        }
-        // Warm, floating mist bands.
+        // The landscape is part of the SAME world canvas as the foreground.
+        // CanvasModulate (DayNightCycle) grades both in one shared pass.
+        // Repeat the mountain panorama in horizontal segments for this prototype.
+        const float backdropWidth = 1450f;
+        const float backdropTop = -370f;
+        const float backdropHeight = 1010f;
+        for (float x = -backdropWidth; x < worldWidth + backdropWidth; x += backdropWidth)
+            DrawTextureRect(SnowyBackdrop,
+                new Rect2(x, backdropTop, backdropWidth, backdropHeight), false);
+        // Atmospheric haze connects mountain distance to the playable foreground.
         for (int i = 0; i < 5; i++)
         {
-            float y = 310 + i * 43 + Mathf.Sin(_time * .3f + i) * 5;
-            DrawRect(new Rect2(0, y, worldWidth, 25),
-                new Color(.85f, .91f, .91f, .025f));
+            float y = 315 + i * 43 + Mathf.Sin(_time * .28f + i) * 6;
+            DrawRect(new Rect2(0, y, worldWidth, 28),
+                new Color(.73f, .81f, .84f, .032f));
         }
 
         // Pixel-art pine sprites; trees remain decorative, not collidable.
