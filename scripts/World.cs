@@ -115,6 +115,12 @@ public partial class World : Node2D
         QueueRedraw();
     }
 
+    private static readonly Texture2D GrassArt = GD.Load<Texture2D>("res://assets/tiles/grass_top_32.svg");
+    private static readonly Texture2D DirtArt = GD.Load<Texture2D>("res://assets/tiles/dirt_32.svg");
+    private static readonly Texture2D StoneArt = GD.Load<Texture2D>("res://assets/tiles/stone_32.svg");
+    private static readonly Texture2D PineArt = GD.Load<Texture2D>("res://assets/foliage/pine_64x128.svg");
+    private static readonly Texture2D FoliageArt = GD.Load<Texture2D>("res://assets/foliage/grass_clump_32.svg");
+
     private float _time;
 
     public override void _Draw()
@@ -160,25 +166,16 @@ public partial class World : Node2D
                 new Color(.85f, .91f, .91f, .025f));
         }
 
-        // Foreground trees, now rendered with several detailed foliage layers.
+        // Pixel-art pine sprites; trees remain decorative, not collidable.
         foreach (int tx in _trees)
         {
             float x = (tx + .5f) * TileSize;
             float ground = _surface[tx] * TileSize;
-            float h = 96 + (tx % 7) * 9;
-            float sway = Mathf.Sin(_time * .7f + tx) * 2f;
-            DrawLine(new Vector2(x, ground), new Vector2(x + sway, ground-h),
-                Color.FromHtml("#463b38"), 8);
-            for (int layer = 0; layer < 4; layer++)
-            {
-                float y = ground - h + layer * 24;
-                float w = 20 + layer * 9;
-                DrawColoredPolygon(new Vector2[] {
-                    new(x + sway, y - 30), new(x-w, y+20), new(x+w, y+20)
-                }, Color.FromHtml(layer % 2 == 0 ? "#244b43" : "#315e4c"));
-                DrawLine(new Vector2(x-w*.6f,y+8),new Vector2(x+sway,y-24),
-                    new Color(.54f,.72f,.57f,.20f),1f);
-            }
+            float h = 115 + (tx % 7) * 10;
+            float w = 72 + (tx % 3) * 8;
+            float sway = Mathf.Sin(_time * .7f + tx) * 1.4f;
+            DrawTextureRect(PineArt,
+                new Rect2(x - w / 2 + sway, ground - h, w, h), false);
         }
 
         // Mineable ground, with stone flecks and animated grass.
@@ -188,30 +185,15 @@ public partial class World : Node2D
             byte id = _tiles[x, y];
             if (id == 0) continue;
             Vector2 at = new(x * TileSize, y * TileSize);
-            Color baseColor = id switch {
-                1 => Color.FromHtml("#4d6743"),
-                2 => Color.FromHtml("#655348"),
-                _ => Color.FromHtml("#333a49")
-            };
-            DrawRect(new Rect2(at,new Vector2(TileSize,TileSize)),baseColor);
-            if ((x * 17 + y * 29) % 7 == 0)
-                DrawRect(new Rect2(at+new Vector2(4,6),new Vector2(5,3)),
-                    new Color(.9f,.9f,1f,.08f));
-            if (id == 3 && (x * 11+y*7)%13 == 0)
-                DrawCircle(at+new Vector2(9,12),2,Color.FromHtml("#616f7b"));
-            if (id == 1 && (y == 0 || _tiles[x,y-1] == 0))
-            {
-                DrawRect(new Rect2(at.X,at.Y,TileSize,5),Color.FromHtml("#99ba76"));
-                for (int blade = 0; blade < 4; blade++)
-                {
-                    float gx = at.X + 4 + blade * 5;
-                    float bend = Mathf.Sin(_time*1.2f + gx*.05f) * 1.2f;
-                    DrawLine(new Vector2(gx,at.Y+2),new Vector2(gx+bend,at.Y-5),
-                        Color.FromHtml("#98c47f"),1.5f);
-                }
-                if ((x * 19 + y * 11) % 21 == 0)
-                    DrawCircle(at+new Vector2(12,-3),2,Color.FromHtml("#e5cba8"));
-            }
+            bool exposed = y == 0 || _tiles[x, y - 1] == 0;
+            Texture2D texture = id == 3 ? StoneArt :
+                id == 1 && exposed ? GrassArt : DirtArt;
+            DrawTextureRect(texture, new Rect2(at, new Vector2(TileSize, TileSize)),
+                false);
+            // Variation above ground uses small hand-authored pixel-grid foliage.
+            if (id == 1 && exposed && (x * 17 + y * 11) % 6 == 0)
+                DrawTextureRect(FoliageArt,
+                    new Rect2(at.X - 4, at.Y - 14, 32, 22), false);
         }
 
         // Gentle drifting fireflies.
