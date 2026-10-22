@@ -45,6 +45,12 @@ public partial class World : Node2D
         for (int x = 0; x < Width; x++) _firstSolid[x] = FindFirstSolid(x);
         BuildColliders();
         BuildChunks();
+        var roots = new List<Vector2>();
+        foreach (int column in _trees)
+            roots.Add(new Vector2((column + 0.5f) * TileSize, _surface[column] * TileSize));
+        var atmosphere = new TreeAtmosphere { Name = "TreeAtmosphere" };
+        atmosphere.Setup(this, roots);
+        AddChild(atmosphere);
         QueueRedraw();
     }
 
@@ -164,9 +170,6 @@ public partial class World : Node2D
         QueueRedraw();
     }
 
-    private static readonly Texture2D PineArt = GD.Load<Texture2D>("res://assets/foliage/pine_64x128.svg");
-
-
     private float _time;
 
     public override void _Draw()
@@ -179,18 +182,6 @@ public partial class World : Node2D
             float y = 315 + i * 43 + Mathf.Sin(_time * .28f + i) * 6;
             DrawRect(new Rect2(0, y, worldWidth, 28),
                 new Color(.73f, .81f, .84f, .032f));
-        }
-
-        // Pixel-art pine sprites; trees remain decorative, not collidable.
-        foreach (int tx in _trees)
-        {
-            float x = (tx + .5f) * TileSize;
-            float ground = _surface[tx] * TileSize;
-            float h = 115 + (tx % 7) * 10;
-            float w = 72 + (tx % 3) * 8;
-            float sway = Mathf.Sin(_time * .7f + tx) * 1.4f;
-            DrawTextureRect(PineArt,
-                new Rect2(x - w / 2 + sway, ground - h, w, h), false);
         }
 
         // Ground tiles are drawn by TileChunk children so edits redraw only one chunk.
