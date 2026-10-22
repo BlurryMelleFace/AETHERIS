@@ -109,58 +109,122 @@ public partial class World : Node2D
         QueueRedraw();
     }
 
+    public override void _Process(double delta)
+    {
+        _time += (float)delta;
+        QueueRedraw();
+    }
+
+    private float _time;
+
     public override void _Draw()
     {
-        DrawRect(new Rect2(-10000, -10000, 30000, 30000),
-            Color.FromHtml("#7898a0"));
-        // Distant rolling hills provide visual depth without external art assets.
-        for (int x = 0; x < Width * TileSize; x += 12)
+        float worldWidth = Width * TileSize;
+        // Atmospheric sky gradient.
+        for (int i = 0; i < 24; i++)
         {
-            float distant = 260 + 26 * Mathf.Sin(x * 0.0014f)
-                                + 12 * Mathf.Sin(x * 0.0035f);
-            DrawRect(new Rect2(x, distant, 12, 650),
-                Color.FromHtml("#68868a"));
-            float near = 350 + 34 * Mathf.Sin(x * 0.0025f)
-                             + 15 * Mathf.Sin(x * 0.006f);
-            DrawRect(new Rect2(x, near, 12, 500),
-                Color.FromHtml("#55777a"));
+            float t = i / 23f;
+            DrawRect(new Rect2(0, i * 55, worldWidth, 57),
+                new Color(Mathf.Lerp(.12f, .40f, t), Mathf.Lerp(.19f, .56f, t),
+                    Mathf.Lerp(.30f, .63f, t), 1));
+        }
+        // Sun glow (drawn as nested, gently translucent circles).
+        Vector2 sun = new(worldWidth * .76f, 155);
+        for (int i = 7; i >= 0; i--)
+            DrawCircle(sun, 28 + i * 13, new Color(1f, .78f, .46f, .017f));
+        DrawCircle(sun, 26, new Color(1f, .87f, .63f, .84f));
+
+        // Rolling background ridges and distant evergreen canopy.
+        for (int x = 0; x < worldWidth; x += 8)
+        {
+            float far = 265 + 38 * Mathf.Sin(x * .0014f) + 13 * Mathf.Sin(x * .0042f);
+            float near = 345 + 31 * Mathf.Sin(x * .0022f) + 17 * Mathf.Sin(x * .006f);
+            DrawRect(new Rect2(x, far, 8, 1200), Color.FromHtml("#71878a"));
+            DrawRect(new Rect2(x, near, 8, 1200), Color.FromHtml("#4e7274"));
         }
 
+        for (int x = 12; x < worldWidth; x += 29)
+        {
+            float y = 374 + 19 * Mathf.Sin(x * .007f);
+            float h = 35 + (x % 5) * 5;
+            DrawLine(new Vector2(x, y), new Vector2(x, y - h), Color.FromHtml("#314d50"), 3);
+            DrawColoredPolygon(new Vector2[] {
+                new(x, y-h-15), new(x-16, y-6), new(x+16, y-6)
+            }, Color.FromHtml("#34575a"));
+        }
+        // Warm, floating mist bands.
+        for (int i = 0; i < 5; i++)
+        {
+            float y = 310 + i * 43 + Mathf.Sin(_time * .3f + i) * 5;
+            DrawRect(new Rect2(0, y, worldWidth, 25),
+                new Color(.85f, .91f, .91f, .025f));
+        }
+
+        // Foreground trees, now rendered with several detailed foliage layers.
         foreach (int tx in _trees)
         {
-            float px = (tx + 0.5f) * TileSize;
+            float x = (tx + .5f) * TileSize;
             float ground = _surface[tx] * TileSize;
-            float tall = 80 + (tx % 6) * 9;
-            DrawLine(new Vector2(px, ground), new Vector2(px, ground - tall),
-                Color.FromHtml("#483b3a"), 8);
-            for (int layer = 0; layer < 3; layer++)
+            float h = 96 + (tx % 7) * 9;
+            float sway = Mathf.Sin(_time * .7f + tx) * 2f;
+            DrawLine(new Vector2(x, ground), new Vector2(x + sway, ground-h),
+                Color.FromHtml("#463b38"), 8);
+            for (int layer = 0; layer < 4; layer++)
             {
-                float top = ground - tall + layer * 24;
-                float radius = 21 + layer * 8;
+                float y = ground - h + layer * 24;
+                float w = 20 + layer * 9;
                 DrawColoredPolygon(new Vector2[] {
-                    new(px, top - 25), new(px - radius, top + 20),
-                    new(px + radius, top + 20)
-                }, Color.FromHtml(layer % 2 == 0 ? "#294b43" : "#365e4b"));
+                    new(x + sway, y - 30), new(x-w, y+20), new(x+w, y+20)
+                }, Color.FromHtml(layer % 2 == 0 ? "#244b43" : "#315e4c"));
+                DrawLine(new Vector2(x-w*.6f,y+8),new Vector2(x+sway,y-24),
+                    new Color(.54f,.72f,.57f,.20f),1f);
             }
         }
 
+        // Mineable ground, with stone flecks and animated grass.
         for (int x = 0; x < Width; x++)
         for (int y = 0; y < Height; y++)
         {
             byte id = _tiles[x, y];
             if (id == 0) continue;
-            Color color = id switch {
-                1 => Color.FromHtml("#647c4d"),
-                2 => Color.FromHtml("#746355"),
-                _ => Color.FromHtml("#454753")
+            Vector2 at = new(x * TileSize, y * TileSize);
+            Color baseColor = id switch {
+                1 => Color.FromHtml("#4d6743"),
+                2 => Color.FromHtml("#655348"),
+                _ => Color.FromHtml("#333a49")
             };
-            DrawRect(new Rect2(x * TileSize, y * TileSize, TileSize, TileSize), color);
-            if (id == 1 && (y == 0 || _tiles[x, y - 1] == 0))
-                DrawRect(new Rect2(x * TileSize, y * TileSize, TileSize, 5),
-                    Color.FromHtml("#93b879"));
-            if (id == 3 && (x * 11 + y * 7) % 19 == 0)
-                DrawCircle(new Vector2(x * TileSize + 8, y * TileSize + 12),
-                    2, Color.FromHtml("#6b717f"));
+            DrawRect(new Rect2(at,new Vector2(TileSize,TileSize)),baseColor);
+            if ((x * 17 + y * 29) % 7 == 0)
+                DrawRect(new Rect2(at+new Vector2(4,6),new Vector2(5,3)),
+                    new Color(.9f,.9f,1f,.08f));
+            if (id == 3 && (x * 11+y*7)%13 == 0)
+                DrawCircle(at+new Vector2(9,12),2,Color.FromHtml("#616f7b"));
+            if (id == 1 && (y == 0 || _tiles[x,y-1] == 0))
+            {
+                DrawRect(new Rect2(at.X,at.Y,TileSize,5),Color.FromHtml("#99ba76"));
+                for (int blade = 0; blade < 4; blade++)
+                {
+                    float gx = at.X + 4 + blade * 5;
+                    float bend = Mathf.Sin(_time*1.2f + gx*.05f) * 1.2f;
+                    DrawLine(new Vector2(gx,at.Y+2),new Vector2(gx+bend,at.Y-5),
+                        Color.FromHtml("#98c47f"),1.5f);
+                }
+                if ((x * 19 + y * 11) % 21 == 0)
+                    DrawCircle(at+new Vector2(12,-3),2,Color.FromHtml("#e5cba8"));
+            }
+        }
+
+        // Gentle drifting fireflies.
+        for (int i = 0; i < 24; i++)
+        {
+            float x = 85 + (i * 181) % (Width * TileSize - 170)
+                + 4 * Mathf.Sin(_time * .6f + i);
+            float y = 275 + 47 * Mathf.Sin(i * 1.1f + _time * .4f);
+            float intensity = .32f + .20f * Mathf.Sin(_time * 2 + i);
+            DrawCircle(new Vector2(x,y),3,
+                new Color(1f,.90f,.60f,intensity*.23f));
+            DrawCircle(new Vector2(x,y),1.1f,
+                new Color(1f,.96f,.70f,intensity));
         }
     }
 }
