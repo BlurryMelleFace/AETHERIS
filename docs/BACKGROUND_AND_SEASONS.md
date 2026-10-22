@@ -15,3 +15,10 @@ This currently changes **tone**, not tree topology, leaf textures, snow buildup 
 
 ## Local test
 Checkout `feature/32px-artwork-integration`, let Godot import the new PNG, `dotnet build`, press F5 and T to test seasonal tone changes. Check that both hills and player-world vegetation color-shift together.
+
+## Full-resolution panorama upgrade
+The former 96×54 asset looked blocky because it was scaled to over 1,000 world pixels. The renderer now **prefers** `res://assets/backgrounds/AETHERIS_MountainBackdrop.png` when present, then falls back to the existing preview.
+
+Download the prepared 1280×720 PNG supplied in this conversation, save it under `assets/backgrounds/AETHERIS_MountainBackdrop.png`, and restart Godot to import it. The large image must be committed to Git after local verification.
+
+This backdrop currently follows the player's camera with slight horizontal drift. Its seasonal/daylight color grade stays linked with the foreground via the shared CanvasModulate. Later, split it into sky / snow peaks / distant woods / near woods for real multi-depth parallax and distinct seasonal responses.
