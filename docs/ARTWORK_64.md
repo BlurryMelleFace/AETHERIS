@@ -1,4 +1,8 @@
-# 64px Artwork Upgrade
+# 64px Artwork Experiment — Reverted to 32px
+
+The active renderer now uses the original 32×32 terrain and grass assets, plus the proportional 64×128 pine sprite. Foliage sizing is restored too. This change stays on `feature/64px-artwork-upgrade`; the branch name is retained. The unused 64px assets remain available for reference. World scale, background motion, and lighting are unchanged.
+
+The following describes the earlier experiment, not the active artwork configuration.
 
 This feature replaces every **currently used foreground art asset** with freshly generated, finer-grained pixel-grid artwork:
 

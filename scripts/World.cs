@@ -116,11 +116,11 @@ public partial class World : Node2D
         QueueRedraw();
     }
 
-    private static readonly Texture2D GrassArt = GD.Load<Texture2D>("res://assets/tiles/grass_top_64.svg");
-    private static readonly Texture2D DirtArt = GD.Load<Texture2D>("res://assets/tiles/dirt_64.svg");
-    private static readonly Texture2D StoneArt = GD.Load<Texture2D>("res://assets/tiles/stone_64.svg");
-    private static readonly Texture2D PineArt = GD.Load<Texture2D>("res://assets/foliage/pine_128x256.svg");
-    private static readonly Texture2D FoliageArt = GD.Load<Texture2D>("res://assets/foliage/grass_clump_64.svg");
+    private static readonly Texture2D GrassArt = GD.Load<Texture2D>("res://assets/tiles/grass_top_32.svg");
+    private static readonly Texture2D DirtArt = GD.Load<Texture2D>("res://assets/tiles/dirt_32.svg");
+    private static readonly Texture2D StoneArt = GD.Load<Texture2D>("res://assets/tiles/stone_32.svg");
+    private static readonly Texture2D PineArt = GD.Load<Texture2D>("res://assets/foliage/pine_64x128.svg");
+    private static readonly Texture2D FoliageArt = GD.Load<Texture2D>("res://assets/foliage/grass_clump_32.svg");
 
 
     private float _time;
@@ -164,7 +164,7 @@ public partial class World : Node2D
             // Variation above ground uses small hand-authored pixel-grid foliage.
             if (id == 1 && exposed && (x * 17 + y * 11) % 6 == 0)
                 DrawTextureRect(FoliageArt,
-                    new Rect2(at.X - 4, at.Y - 18, 36, 28), false);
+                    new Rect2(at.X - 4, at.Y - 14, 32, 22), false);
         }
 
         // Gentle drifting fireflies.
