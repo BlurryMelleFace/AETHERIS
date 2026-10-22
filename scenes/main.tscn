@@ -52,7 +52,7 @@ offset_left = 20.0
 offset_top = 20.0
 offset_right = 1250.0
 offset_bottom = 90.0
-text = "AETHERIS | LIVING FOREST | A/D move | Space jump | LMB mine | RMB place | Hold TAB item wheel | R reset"
+text = "AETHERIS | LIVING FOREST | A/D move | Space jump | Shift sprint | LMB mine | RMB place | Hold TAB item wheel | R reset"
 
 [node name="RadialWheel" type="CanvasLayer" parent="."]
 script = ExtResource("7_wheel")

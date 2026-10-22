@@ -17,7 +17,8 @@ public partial class Player : CharacterBody2D
     private const float Acceleration = 2400f;
     private const float IconPixel = HeroSprite.PixelScale;
 
-    [Export] public float WalkSpeed { get; set; } = 240f;
+    [Export] public float WalkSpeed { get; set; } = 170f;
+    [Export] public float SprintSpeed { get; set; } = 290f;
     [Export] public float JumpVelocity { get; set; } = -520f;
     [Export] public float Gravity { get; set; } = 1400f;
 
@@ -80,7 +81,8 @@ public partial class Player : CharacterBody2D
                    - (Input.IsKeyPressed(Key.A) || Input.IsKeyPressed(Key.Left) ? 1 : 0);
         // Stops are instant so lining up with a gap stays precise; only the start eases in.
         if (axis == 0f || Mathf.Sign(velocity.X) == -axis) velocity.X = 0f;
-        velocity.X = Mathf.MoveToward(velocity.X, axis * WalkSpeed, Acceleration * dt);
+        float topSpeed = Input.IsKeyPressed(Key.Shift) ? SprintSpeed : WalkSpeed;
+        velocity.X = Mathf.MoveToward(velocity.X, axis * topSpeed, Acceleration * dt);
         if (axis != 0f) _facing = axis;
         Velocity = velocity;
 
@@ -143,10 +145,10 @@ public partial class Player : CharacterBody2D
         }
         else if (speed > 5f)
         {
-            bool run = speed >= WalkSpeed * 0.7f;
+            bool run = speed > WalkSpeed * 1.15f;
             row = run ? HeroRow.Run : HeroRow.Walk;
-            // One cycle per ~70px of running or ~30px of walking keeps the feet from skating.
-            _runCycle = Mathf.PosMod(_runCycle + speed * dt / (run ? 70f : 30f), 1f);
+            // Distance covered per animation cycle, matched to the stride so the feet do not skate.
+            _runCycle = Mathf.PosMod(_runCycle + speed * dt / (run ? 78f : 48f), 1f);
             column = (int)(_runCycle * HeroSprite.Columns);
         }
         else

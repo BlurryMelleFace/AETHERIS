@@ -25,7 +25,12 @@ public partial class HeroWalkCapture : Node
             Input.FlushBufferedEvents();
             for (int i = 0; i < 12; i++)
             {
-                await Wait(0.045);
+                if (i == 6)
+                {
+                    Input.ParseInputEvent(new InputEventKey { Keycode = Key.Shift, PhysicalKeycode = Key.Shift, Pressed = true });
+                    Input.FlushBufferedEvents();
+                }
+                await Wait(0.07);
                 await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
                 Image full = GetViewport().GetTexture().GetImage();
                 full.GetRegion(new Rect2I((int)(full.GetWidth() / 2f) - 90, (int)(full.GetHeight() / 2f) - 100, 180, 200))

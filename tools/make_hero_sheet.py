@@ -31,14 +31,14 @@ def hexc(value):
 
 # Palettes: light, base, shade, deep (hue-shifted ramps rather than plain darkening).
 SKIN = dict(light=hexc("#f7cfae"), base=hexc("#e8b08c"), shade=hexc("#c78468"), deep=hexc("#a2624f"))
-HAIR = dict(light=hexc("#8a5a3c"), base=hexc("#5e3a2a"), shade=hexc("#3f2620"), deep=hexc("#2a1819"))
-JACKET = dict(light=hexc("#7fa3a6"), base=hexc("#4f747b"), shade=hexc("#385760"), deep=hexc("#263e4a"))
-JACKET_FAR = dict(light=hexc("#5f8488"), base=hexc("#3d5f66"), shade=hexc("#2d4952"), deep=hexc("#1f3340"))
-PANTS = dict(light=hexc("#5d6590"), base=hexc("#3f4668"), shade=hexc("#2d3250"), deep=hexc("#1d2138"))
-PANTS_FAR = dict(light=hexc("#4a5178"), base=hexc("#323857"), shade=hexc("#242842"), deep=hexc("#171a2c"))
-BOOT = dict(light=hexc("#c0705a"), base=hexc("#8f4a3b"), shade=hexc("#64302b"), deep=hexc("#43201f"))
-BOOT_FAR = dict(light=hexc("#9e5a49"), base=hexc("#753c31"), shade=hexc("#512826"), deep=hexc("#381b1b"))
-PACK = dict(light=hexc("#b05468"), base=hexc("#7e2d41"), shade=hexc("#561e30"), deep=hexc("#3a1424"))
+HAIR = dict(light=hexc("#b6773f"), base=hexc("#8a5430"), shade=hexc("#5f3a22"), deep=hexc("#3d2418"))
+JACKET = dict(light=hexc("#6aa6ab"), base=hexc("#3f7681"), shade=hexc("#2d5662"), deep=hexc("#1f3d4a"))
+JACKET_FAR = dict(light=hexc("#4f8a91"), base=hexc("#336169"), shade=hexc("#254753"), deep=hexc("#1a3340"))
+PANTS = dict(light=hexc("#4a527f"), base=hexc("#2c3257"), shade=hexc("#1f2340"), deep=hexc("#141730"))
+PANTS_FAR = dict(light=hexc("#3c4370"), base=hexc("#242a4b"), shade=hexc("#191d37"), deep=hexc("#10122a"))
+BOOT = dict(light=hexc("#cf8650"), base=hexc("#98562f"), shade=hexc("#693820"), deep=hexc("#45241a"))
+BOOT_FAR = dict(light=hexc("#b36f40"), base=hexc("#7d4527"), shade=hexc("#552e1c"), deep=hexc("#3a1f16"))
+PACK = dict(light=hexc("#d4708a"), base=hexc("#a23f5d"), shade=hexc("#6f2a43"), deep=hexc("#471a2e"))
 OUTLINE = hexc("#17111c")
 EYE = hexc("#1c1420")
 EYE_SHINE = hexc("#fff4e6")
@@ -163,7 +163,7 @@ class Canvas:
 
 # ---------- skeleton ----------
 THIGH, SHIN = 9.0, 9.0
-UPPER_ARM, FOREARM = 6.0, 5.8
+UPPER_ARM, FOREARM = 5.2, 4.9
 TORSO = 11.6
 
 
@@ -222,30 +222,32 @@ def idle_pose(t):
 
 def walk_pose(t):
     p = t / 6
-    stride = 6.6
+    stride = 8.4
     nx, nl, na = leg_path(p, stride, 0.5, 4.6, 24, -12)
     fx, fl, fa = leg_path(p + 0.5, stride, 0.5, 4.6, 24, -12)
     bob = 0.95 * math.cos(4 * math.pi * p)
     swing = math.cos(2 * math.pi * p)
+    s = -swing  # arms swing against the legs
     return pose(
-        pelvis=(24.0, 26.5 + bob), lean=4.5, head_bob=0.15 * bob,
-        near_foot=(24 + nx, 43.6 - nl, na), far_foot=(24 + fx, 43.6 - fl, fa),
-        near_arm=(-24 * swing, 12 + 7 * max(0.0, -swing)), far_arm=(24 * swing, 12 + 7 * max(0.0, swing)),
+        pelvis=(24.0, 26.5 + bob), lean=4.0, head_bob=0.15 * bob,
+        near_foot=(24.9 + nx, 43.6 - nl, na), far_foot=(23.1 + fx, 43.6 - fl, fa),
+        near_arm=(5 + 20 * s, 16 + 14 * max(0.0, s)), far_arm=(5 - 20 * s, 16 + 14 * max(0.0, -s)),
         pack_bounce=0.6 * bob, hair_sway=-2.0 * swing, shoulder_lift=0.2 * bob,
     )
 
 
 def run_pose(t):
     p = t / 6
-    stride = 7.6
+    stride = 9.4
     nx, nl, na = leg_path(p, stride, 0.36, 10.0, 38, -14)
     fx, fl, fa = leg_path(p + 0.5, stride, 0.36, 10.0, 38, -14)
     bob = 1.7 * math.cos(4 * math.pi * (p - 0.19)) - 1.0
     swing = math.cos(2 * math.pi * p)
+    s = -swing
     return pose(
         pelvis=(24.0 + 1.0, 27.8 + bob), lean=14.0, head_tilt=-4.0, head_bob=0.3 * bob,
         near_foot=(24 + nx, 43.6 - nl, na), far_foot=(24 + fx, 43.6 - fl, fa),
-        near_arm=(18 - 36 * swing, 62 + 14 * swing), far_arm=(18 + 36 * swing, 62 - 14 * swing),
+        near_arm=(10 + 18 * s, 84 + 12 * s), far_arm=(10 - 18 * s, 84 - 12 * s),
         pack_bounce=1.2 * bob, hair_sway=-4.0 * swing - 2, shoulder_lift=0.0,
     )
 
@@ -256,16 +258,16 @@ JUMP_POSES = [
          near_arm=(-34.0, 20.0), far_arm=(-40.0, 24.0), pack_bounce=1.2, hair_sway=-2.0),
     # 1 push-off, body stretched up on the toes
     pose(pelvis=(24.0, 25.2), lean=6.0, head_tilt=2.0, near_foot=(24.4, 42.4, 38), far_foot=(21.4, 42.0, 40),
-         near_arm=(55.0, 22.0), far_arm=(40.0, 24.0), pack_bounce=-0.6, hair_sway=-3.0),
+         near_arm=(40.0, 22.0), far_arm=(30.0, 24.0), pack_bounce=-0.6, hair_sway=-3.0),
     # 2 rising, knees drawing up
     pose(pelvis=(24.0, 24.4), lean=8.0, head_tilt=0.0, near_foot=(27.5, 39.4, 18), far_foot=(21.0, 41.2, 28),
-         near_arm=(100.0, 18.0), far_arm=(84.0, 22.0), pack_bounce=-0.8, hair_sway=-4.0),
+         near_arm=(78.0, 20.0), far_arm=(62.0, 24.0), pack_bounce=-0.8, hair_sway=-4.0),
     # 3 apex, tucked
     pose(pelvis=(24.0, 25.4), lean=14.0, head_tilt=-4.0, near_foot=(28.5, 37.6, 10), far_foot=(22.5, 38.2, 22),
-         near_arm=(100.0, 30.0), far_arm=(86.0, 28.0), pack_bounce=0.0, hair_sway=-1.0),
+         near_arm=(70.0, 30.0), far_arm=(56.0, 30.0), pack_bounce=0.0, hair_sway=-1.0),
     # 4 falling, legs reaching down
     pose(pelvis=(24.0, 25.6), lean=5.0, head_tilt=3.0, near_foot=(26.6, 42.6, 24), far_foot=(21.6, 41.2, 30),
-         near_arm=(78.0, 16.0), far_arm=(62.0, 20.0), pack_bounce=1.2, hair_sway=3.5),
+         near_arm=(58.0, 18.0), far_arm=(44.0, 22.0), pack_bounce=1.2, hair_sway=3.5),
     # 5 landing, absorbing the impact
     pose(pelvis=(23.6, 30.4), lean=16.0, head_tilt=-4.0, near_foot=(27.0, 43.6, -2), far_foot=(21.0, 43.6, 0),
          near_arm=(-18.0, 30.0), far_arm=(-26.0, 34.0), pack_bounce=1.5, hair_sway=-1.0),
@@ -297,14 +299,14 @@ def draw_leg(canvas, hip, foot, far):
     shin = (ankle[0] - knee[0], ankle[1] - knee[1])
     length = math.hypot(*shin) or 1
     up = (-shin[0] / length, -shin[1] / length)
-    # boot: a short shaft with a lighter cuff, then a foot with a rounded toe
-    shaft_top = add(ankle, scale(up, 3.4))
-    canvas.paint(capsule(shaft_top, ankle, 2.25, 2.0), boots)
-    cuff = capsule(shaft_top, add(shaft_top, scale(up, -1.0)), 2.35, 2.2)
+    # boot: a chunky shaft with a lighter cuff, then a foot with a rounded toe
+    shaft_top = add(ankle, scale(up, 4.2))
+    canvas.paint(capsule(shaft_top, ankle, 2.5, 2.2), boots)
+    cuff = capsule(shaft_top, add(shaft_top, scale(up, -1.2)), 2.6, 2.4)
     canvas.mask_pixels(cuff, boots["light"])
-    heel = add(ankle, add(scale(direction, -1.2), scale(rot((0, 1), angle), 1.8)))
-    toe = add(ankle, add(scale(direction, 4.0), scale(rot((0, 1), angle), 1.8)))
-    canvas.paint(capsule(heel, toe, 1.95, 1.6), boots)
+    heel = add(ankle, add(scale(direction, -1.3), scale(rot((0, 1), angle), 1.8)))
+    toe = add(ankle, add(scale(direction, 4.3), scale(rot((0, 1), angle), 1.8)))
+    canvas.paint(capsule(heel, toe, 2.1, 1.75), boots)
     return knee, ankle
 
 
@@ -324,7 +326,7 @@ def draw_arm(canvas, shoulder, arm, far):
     return add(wrist, scale(fore_dir, 1.0))
 
 
-HOLD_ARM = (76.0, 44.0)  # raised forward so a torch is carried in front of the face
+HOLD_ARM = (24.0, 104.0)  # elbow close to the body, forearm raised so the torch is carried beside the head
 
 
 def render(row, frame, hold=False):
@@ -372,6 +374,8 @@ def render(row, frame, hold=False):
     canvas.mask_pixels(zipper & torso, JACKET["deep"])
     collar = capsule(add(shoulder, scale(u, -0.6)), add(shoulder, scale(u, 1.0)), 3.3, 2.7)
     canvas.paint(collar, dict(JACKET, base=JACKET["light"], shade=JACKET["base"]), separate=True)
+    strap = capsule(add(add(shoulder, scale(u, 0.2)), scale(front, 0.8)), add(add(pelvis, scale(u, 3.4)), scale(front, 3.0)), 0.5, 0.5)
+    canvas.mask_pixels(strap & torso & ~collar, PACK["shade"])
 
     # neck and head
     neck_base = add(shoulder, scale(u, 0.6))
@@ -393,26 +397,26 @@ def render(row, frame, hold=False):
     canvas.pixels([hp(4.3, 1.7)], SKIN["shade"])
     canvas.pixels([hp(3.0, 3.1)], SKIN["deep"])
     canvas.pixels([hp(1.9, 1.5)], SKIN["light"])
-    # hair: cap over the back and top, a swept fringe, a bun with a tie and a short tail
+    # hair: cap over the back and top, a swept fringe and a high ponytail with a tie
     sway = spec["hair_sway"]
     cap = ellipse(hp(-1.3, -1.1), 5.4, 5.5, tilt)
     dx, dy = PX - head_c[0], PY - head_c[1]
     ca, sa = math.cos(math.radians(tilt)), math.sin(math.radians(tilt))
     local_x, local_y = dx * ca + dy * sa, -dx * sa + dy * ca
-    cut = None
     face = (local_x > -0.9) & (local_y > -2.7)
     hair = cap & ~face & (local_y < 2.4)
     hair |= capsule(hp(0.2, -3.7), hp(3.9, -2.5), 1.25, 0.85)
     hair |= capsule(hp(-0.4, -3.0), hp(-0.2, -0.4), 0.9, 0.8)
-    tail = capsule(hp(-4.0, -3.6), hp(-5.5 - sway * 0.5, 1.8), 1.0, 0.7)
-    bun_c = hp(-3.6 + sway * 0.2, -5.2)
-    bun = ellipse(bun_c, 2.8, 2.6)
-    hair |= tail
     canvas.paint(hair, HAIR, separate=True, light=hair & ellipse(hp(0.0, -3.7), 2.6, 1.0, tilt),
                  shade=hair & ellipse(hp(-3.6, 1.2), 2.2, 1.8, tilt))
-    canvas.paint(bun, HAIR, separate=True, light=bun & ellipse(add(bun_c, (-0.6, -0.9)), 1.2, 0.9))
-    tie = capsule(hp(-2.6, -3.2), hp(-1.4, -4.0), 0.8, 0.8) & (hair | bun)
-    canvas.mask_pixels(tie, TIE)
+    # ponytail: tied high at the back, hangs down and streams behind when moving fast
+    tie_p = hp(-3.4, -4.4)
+    mid = add(tie_p, rot((-6.2, 1.0), sway * 5.0))
+    end = add(mid, rot((-0.8 - 0.6 * abs(sway), 6.4), sway * 9.0))
+    tail = capsule(tie_p, mid, 2.1, 2.4) | capsule(mid, end, 2.4, 0.9)
+    canvas.paint(tail, HAIR, separate=True, light=tail & ellipse(add(mid, (-0.4, -1.2)), 1.6, 1.0),
+                 shade=tail & ellipse(add(end, (0.9, -1.0)), 1.3, 2.2))
+    canvas.mask_pixels(capsule(add(tie_p, (-0.6, -0.8)), add(tie_p, (-1.2, 1.0)), 1.0, 1.0), TIE)
 
     if hold:
         hand = draw_arm(canvas, add(shoulder, scale(front, 0.4)), HOLD_ARM, far=False)

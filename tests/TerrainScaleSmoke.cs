@@ -61,12 +61,28 @@ public partial class TerrainScaleSmoke : Node
             float startX = _player.GlobalPosition.X;
             Hold(Key.D, true);
             await RealSeconds(0.5);
-            Require(HeroRow() == 2, "A moving player plays the run animation.");
+            Require(HeroRow() == 1, "A walking player plays the walk animation.");
             await RealSeconds(0.5);
             Hold(Key.D, false);
             float walked = _player.GlobalPosition.X - startX;
             GD.Print($"PERF walked {walked:F0}px in 1s (speed {_player.WalkSpeed})");
             Require(walked > _player.WalkSpeed * 0.9f, "Walking along flat blocks must not snag on seams.");
+
+            // Holding Shift sprints: faster, with the run animation.
+            Teleport(100 * World.TileSize, standY - 2f);
+            await RealSeconds(0.3);
+            startX = _player.GlobalPosition.X;
+            Hold(Key.Shift, true);
+            Hold(Key.D, true);
+            await RealSeconds(0.6);
+            Require(HeroRow() == 2, "A sprinting player plays the run animation.");
+            Require(_player.Velocity.X > _player.WalkSpeed * 1.4f, "Sprinting must be clearly faster than walking.");
+            await RealSeconds(0.4);
+            Hold(Key.D, false);
+            Hold(Key.Shift, false);
+            float sprinted = _player.GlobalPosition.X - startX;
+            GD.Print($"PERF sprinted {sprinted:F0}px in 1s (speed {_player.SprintSpeed})");
+            Require(sprinted > walked * 1.4f, "Sprinting covers much more ground than walking.");
 
             // One-block ledges are climbed automatically.
             for (int x = 112; x < 118; x++) _world.SetTile(new Vector2I(x, 29), 1);
@@ -143,7 +159,9 @@ public partial class TerrainScaleSmoke : Node
             Teleport(103 * World.TileSize, walkY - 2f);
             await RealSeconds(0.4);
             Hold(Key.D, true);
-            await RealSeconds(1.2);
+            ulong walkLimit = Time.GetTicksMsec() + 3000;
+            while (_player.GlobalPosition.X < 112.5f * World.TileSize && Time.GetTicksMsec() < walkLimit)
+                await ToSignal(GetTree(), SceneTree.SignalName.PhysicsFrame);
             Hold(Key.D, false);
             Require(_player.GlobalPosition.X > 112 * World.TileSize, "A 3-block-high opening must let the player walk through.");
             for (int x = 105; x < 111; x++) { _world.SetTile(new Vector2I(x, 26), 0); _world.SetTile(new Vector2I(x, 27), 1); }
